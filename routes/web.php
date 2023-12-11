@@ -5,6 +5,9 @@ use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\CetakController;
 use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\AuthController;
+use App\Models\Semester;
+use App\Http\Controllers\MajaController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -15,6 +18,7 @@ use App\Http\Controllers\AuthController;
 | contains the "web" middleware group. Now create something great!
 |
 */
+
 Route::group(['prefix' => 'cetak'], function () {
     Route::get('/', [CetakController::class, 'viewPdf']);
     Route::group(['prefix' => 'berita-acara'], function () {
@@ -45,4 +49,7 @@ Route::group(['prefix' => 'downloads'], function () {
     Route::get('/template-sumatif-lingkup-materi/{pembelajaran_id?}', [DownloadController::class, 'template_sumatif_lingkup_materi'])->name('template-sumatif-lingkup-materi');
     Route::get('/template-sumatif-akhir-semester/{pembelajaran_id?}', [DownloadController::class, 'template_sumatif_akhir_semester'])->name('template-sumatif-akhir-semester');
 });
+Route::get('/maja/uploadttd', [MajaController::class, 'depanUploadTtd'])->middleware(['auth:sanctum']);
+Route::post('/maja/simpan/ttd', [MajaController::class, 'uploadttd'])->middleware(['auth:sanctum']);
+
 Route::get('/{any}', [ApplicationController::class, 'index'])->where('any', '.*');
