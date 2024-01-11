@@ -27,14 +27,16 @@ function filter_agama_siswa($pembelajaran_id, $rombongan_belajar_id){
         $agama_id[$agama->agama_id] = $nama_agama;
     }
     $get_mapel = Pembelajaran::with('mata_pelajaran')->find($pembelajaran_id);
-    $nama_mapel = str_replace('Pendidikan Agama', '', $get_mapel->mata_pelajaran->nama);
-    $nama_mapel = str_replace('KongHuChu', 'Konghuchu', $nama_mapel);
-    $nama_mapel = str_replace('Kong Hu Chu', 'Konghuchu', $nama_mapel);
-    $nama_mapel = str_replace('dan Budi Pekerti', '', $nama_mapel);
-    $nama_mapel = str_replace('Pendidikan Kepercayaan terhadap', '', $nama_mapel);
-    $nama_mapel = str_replace('Tuhan YME', 'Kepercayaan kpd Tuhan YME', $nama_mapel);
-    $nama_mapel = trim($nama_mapel);
-    $agama_id = array_search($nama_mapel, $agama_id);
+    if($get_mapel){
+        $nama_mapel = str_replace('Pendidikan Agama', '', $get_mapel->mata_pelajaran->nama);
+        $nama_mapel = str_replace('KongHuChu', 'Konghuchu', $nama_mapel);
+        $nama_mapel = str_replace('Kong Hu Chu', 'Konghuchu', $nama_mapel);
+        $nama_mapel = str_replace('dan Budi Pekerti', '', $nama_mapel);
+        $nama_mapel = str_replace('Pendidikan Kepercayaan terhadap', '', $nama_mapel);
+        $nama_mapel = str_replace('Tuhan YME', 'Kepercayaan kpd Tuhan YME', $nama_mapel);
+        $nama_mapel = trim($nama_mapel);
+        $agama_id = array_search($nama_mapel, $agama_id);
+    }
     return $agama_id;
 }
 function mapel_agama(){
@@ -110,8 +112,8 @@ function predikat($kkm, $nilai, $produktif = NULL){
         $result[$nilai] = 100;
     return $result[$nilai];
 }
-function konversi_huruf($kkm, $nilai, $produktif = NULL){
-    $check_2018 = check_2018();
+function konversi_huruf($kkm, $nilai, $produktif = NULL, $semester_id = NULL){
+    $check_2018 = check_2018($semester_id);
     if ($check_2018) {
         $show = 'predikat';
         $a = predikat($kkm, 'A') + 1;
@@ -206,12 +208,12 @@ function opsi_budaya($n)
     }
     return $predikat;
 }
-function get_kkm($kelompok_id, $kkm)
+function get_kkm($kelompok_id, $kkm, $semester_id)
 {
     if ($kkm) {
         return $kkm;
     }
-    $check_2018 = check_2018();
+    $check_2018 = check_2018($semester_id);
     if ($check_2018) {
         $produktif = array(4, 5, 9, 10, 13);
         $non_produktif = array(1, 2, 3, 6, 7, 8, 11, 12, 99);
@@ -482,4 +484,12 @@ function array_filter_recursive($array, $callback = null, $remove_empty_arrays =
     }
     unset($value); // kill the reference
     return $array;
+}
+function check_2018($semester_id){
+	$tahun = substr($semester_id, 0, 4);
+	if ($tahun >= 2018) {
+        return true;
+    } else {
+        return false;
+    }
 }
