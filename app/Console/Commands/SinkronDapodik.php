@@ -452,10 +452,13 @@ class SinkronDapodik extends Command
         if(isset($data->kode_wilayah)){
             $this->cari_wilayah($user, $semester, $data->kode_wilayah);
         }
+        $kecamatan = NULL;
         if($wilayah){
-            $kecamatan = ($wilayah['kecamatan']) ? $wilayah['kecamatan']->nama : 0;
-        } else {
-            $kecamatan = NULL;
+            try {
+                $kecamatan = ($wilayah['kecamatan']) ? $wilayah['kecamatan']->nama : 0;
+            } catch (\Throwable $e) {
+                $this->error("\n".'Alamat peserta didik '.strtoupper($data->nama).' tidak valid!');
+            }
         }
         Peserta_didik::withTrashed()->updateOrCreate(
             [
