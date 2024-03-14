@@ -24,7 +24,6 @@ use PDF;
 
 class CetakController extends Controller
 {
-
 	public function generate_pdf()
 	{
 		$data = [
@@ -46,9 +45,9 @@ class CetakController extends Controller
 			$query->with(['single_catatan_wali', 'peserta_didik.agama']);
 		}])->with(['pembelajaran' => function ($query) use ($callback) {
 			$query->with('kelompok')->orderBy('kelompok_id', 'asc')->orderBy('no_urut', 'asc');
-			$query->whereHas('rapor_pts', $callback)->with(['rapor_pts'=> $callback]);
-		}])->with('jurusan')->with('kurikulum')->with(['sekolah' => function($query){
-			$query->with(['kasek' => function($query){
+			$query->whereHas('rapor_pts', $callback)->with(['rapor_pts' => $callback]);
+		}])->with('jurusan')->with('kurikulum')->with(['sekolah' => function ($query) {
+			$query->with(['kasek' => function ($query) {
 				$query->where('semester_id', semester_id());
 			}]);
 		}])->find($rombongan_belajar_id);
@@ -64,7 +63,7 @@ class CetakController extends Controller
 		$pdf->getMpdf()->defaultfooterfontsize = 7;
 		$pdf->getMpdf()->defaultfooterline = 0;
 		$data['rombongan_belajar'] = $rombongan_belajar;
-		$tanggal_rapor = config('global.' . request()->route('sekolah_id') . '.' . request()->route('semester_id') . '.tanggal_rapor_uts');;
+		$tanggal_rapor = config('global.' . request()->route('sekolah_id') . '.' . semester_id() . '.tanggal_rapor_uts');;
 		if ($tanggal_rapor) {
 			$data['tanggal_rapor'] = Carbon::parse($tanggal_rapor)->translatedFormat('d F Y');
 		} else {
@@ -73,15 +72,6 @@ class CetakController extends Controller
 		//$tanggal_rapor;
 		foreach ($rombongan_belajar->anggota_rombel as $anggota_rombel) {
 			$pdf->getMpdf()->SetFooter(strtoupper($anggota_rombel->peserta_didik->nama) . ' - ' . $rombongan_belajar->nama . '|{PAGENO}|Dicetak dari ' . config('app.name') . ' v.' . get_setting('app_version'));
-        $tanggal_rapor = config('global.'.request()->route('sekolah_id').'.'.semester_id().'.tanggal_rapor_uts');;
-		if($tanggal_rapor) {
-            $data['tanggal_rapor'] = Carbon::parse($tanggal_rapor)->translatedFormat('d F Y');
-        } else {
-            $data['tanggal_rapor'] = Carbon::now()->translatedFormat('d F Y');
-        }
-        //$tanggal_rapor;
-		foreach($rombongan_belajar->anggota_rombel as $anggota_rombel){
-			$pdf->getMpdf()->SetFooter(strtoupper($anggota_rombel->peserta_didik->nama).' - '.$rombongan_belajar->nama.'|{PAGENO}|Dicetak dari '.config('app.name').' v.'.get_setting('app_version'));
 			$data['peserta_didik'] = $anggota_rombel->peserta_didik;
 			$data['anggota_rombel'] = $anggota_rombel;
 			$data['sekolah'] = $rombongan_belajar->sekolah;
@@ -135,10 +125,7 @@ class CetakController extends Controller
 		} else {
 			$get_siswa = Anggota_rombel::with(['peserta_didik' => function ($query) {
 				$query->with(['agama', 'pekerjaan_ayah', 'pekerjaan_ibu', 'pekerjaan_wali', 'wilayah', 'sekolah' => function ($query) {
-					$query->with('kepala_sekolah');
-			$get_siswa = Anggota_rombel::with(['peserta_didik' => function($query){
-				$query->with(['agama', 'pekerjaan_ayah', 'pekerjaan_ibu', 'pekerjaan_wali', 'wilayah', 'sekolah' => function($query){
-					$query->with(['kasek' => function($query){
+					$query->with(['kasek' => function ($query) {
 						$query->where('semester_id', semester_id());
 					}]);
 				}]);
@@ -191,10 +178,7 @@ class CetakController extends Controller
 			'kehadiran',
 			'peserta_didik' => function ($query) {
 				$query->with(['agama', 'wilayah', 'pekerjaan_ayah', 'pekerjaan_ibu', 'pekerjaan_wali', 'sekolah' => function ($query) {
-					$query->with('kepala_sekolah');
-			'peserta_didik' => function($query){
-				$query->with(['agama', 'wilayah', 'pekerjaan_ayah', 'pekerjaan_ibu', 'pekerjaan_wali', 'sekolah' => function($query){
-					$query->with(['kasek' => function($query){
+					$query->with(['kasek' => function ($query) {
 						$query->where('semester_id', request()->route('semester_id'));
 					}]);
 				}]);
@@ -304,12 +288,6 @@ class CetakController extends Controller
 			},
 		])->first();
 		$tanggal_rapor = get_setting('tanggal_rapor', request()->route('sekolah_id'), request()->route('semester_id'));
-		//config('global.'.request()->route('sekolah_id').'.'.request()->route('semester_id').'.tanggal_rapor');
-		if ($tanggal_rapor) {
-			$tanggal_rapor = Carbon::parse($tanggal_rapor)->translatedFormat('d F Y');
-		} else {
-			$tanggal_rapor = Carbon::now()->translatedFormat('d F Y');
-		}
 		if ($tanggal_rapor) {
 			$tanggal_rapor = Carbon::parse($tanggal_rapor)->translatedFormat('d F Y');
 		} else {
@@ -364,10 +342,7 @@ class CetakController extends Controller
 			$get_siswa = Anggota_rombel::with([
 				'peserta_didik' => function ($query) {
 					$query->with(['agama', 'wilayah', 'pekerjaan_ayah', 'pekerjaan_ibu', 'pekerjaan_wali', 'sekolah' => function ($query) {
-						$query->with('kepala_sekolah');
-				'peserta_didik' => function($query){
-					$query->with(['agama', 'wilayah', 'pekerjaan_ayah', 'pekerjaan_ibu', 'pekerjaan_wali', 'sekolah' => function($query){
-						$query->with(['kasek' => function($query){
+						$query->with(['kasek' => function ($query) {
 							$query->where('semester_id', request()->route('semester_id'));
 						}]);
 					}]);
@@ -549,7 +524,7 @@ class CetakController extends Controller
 		$data['count_penilaian_ukk'] = $count_penilaian_ukk;
 		$data['paket'] = Paket_ukk::with('jurusan')->with('unit_ukk')->find($rencana_ukk->paket_ukk_id);
 		$data['asesor'] = Guru::with('dudi')->find($rencana_ukk->eksternal);
-		$data['sekolah'] = Sekolah::with(['kasek' => function($query) use ($anggota_rombel){
+		$data['sekolah'] = Sekolah::with(['kasek' => function ($query) use ($anggota_rombel) {
 			$query->where('semester_id', $anggota_rombel->semester_id);
 		}])->find($anggota_rombel->sekolah_id);
 		$pdf = PDF::loadView('cetak.sertifikat1', $data);
