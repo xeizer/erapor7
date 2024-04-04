@@ -75,9 +75,17 @@
                 <td style="width:40%" class="text-center">
                     {{ $rencana_ukk->guru_eksternal->dudi ? $rencana_ukk->guru_eksternal->dudi->nama : '-' }}<br>
                     <br>
-                    <br>
-                    <br>
-                    <br>
+                    @php
+                        $pathGuru =
+                            'storage/images/guru' .
+                            str_replace('-', '', $rencana_ukk->guru_eksternal->guru_id) .
+                            '.png';
+                    @endphp
+                    @if (file_exists(public_path($pathGuru)))
+                        <img src="{{ asset($pathGuru) }}" width="90px" />
+                    @else
+                        <br /><br /><br />
+                    @endif
                     <br>
                     <p><b>{{ $rencana_ukk->guru_eksternal->nama_lengkap }}</b></p>
                     <p>Penguji Eksternal</p>
