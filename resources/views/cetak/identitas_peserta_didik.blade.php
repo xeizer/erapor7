@@ -187,7 +187,8 @@
             <td style="width: 15%;padding:5px;" rowspan="5">&nbsp;</td>
             <td style="width: 50%;padding:5px;">
                 {{ str_replace('Kab. ', '', $get_siswa->peserta_didik->sekolah->kabupaten) }},
-                {{ $get_siswa->peserta_didik->diterima }}<br />Kepala Sekolah</td>
+                {{ $get_siswa->peserta_didik->diterima }}<br />{{ get_setting('jabatan', $get_siswa->sekolah_id, $get_siswa->semester_id) }}
+            </td>
         </tr>
         <tr>
             <td style="width: 50%;padding:5px;">&nbsp;</td>

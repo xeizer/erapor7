@@ -280,7 +280,7 @@
             <td style="width:40%;">
             </td>
             <td style="width:60%;">
-                <p>Mengetahui,<br>Kepala Sekolah</p>
+                <p>Mengetahui,<br>{{ get_setting('jabatan', $get_siswa->sekolah_id, $get_siswa->semester_id) }}</p>
 
                 <br>
                 <img src="{{ asset('storage/images/ttdkepsek.png') }}" style="width: 120px" />

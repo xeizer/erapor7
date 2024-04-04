@@ -227,7 +227,7 @@
   <table width="100%" style="margin-top:10px;">
 	<tr>
 	  <td style="width:100%;text-align:center;">
-		  <p>Mengetahui,<br>Kepala Sekolah</p>
+		  <p>Mengetahui,<br>{{ get_setting('jabatan', $get_siswa->sekolah_id, $get_siswa->semester_id) }}</p>
 	  <br>
   <br>
   <br>
@@ -241,9 +241,9 @@
   </table>
 @else
 <div class="strong">B.&nbsp;&nbsp;Catatan Akademik</div>
-<table width="100%" border="1">
+<table width="100%" class="table" border="1">
   <tr>
-    <td style="padding:10px;">{!! ($get_siswa->catatan_wali) ? $get_siswa->catatan_wali->uraian_deskripsi : '' !!}</td>
+    <td style="padding:10px;">{!! ($get_siswa->single_catatan_wali) ? $get_siswa->single_catatan_wali->uraian_deskripsi : '' !!}</td>
   </tr>
 </table>
 @endif
