@@ -196,16 +196,25 @@
     <br />
     <?php
     if ($get_siswa->rombongan_belajar->semester->semester == 2) {
-        if ($get_siswa->rombongan_belajar->rombel_empat_tahun) {
-            $text_status = 'Kenaikan Kelas';
-            $not_yet = 'Belum dilakukan kenaikan kelas';
-        } elseif ($get_siswa->rombongan_belajar->tingkat >= 12) {
+        if ($opsi == 'lulus') {
             $text_status = 'Status Kelulusan';
             $not_yet = 'Belum dilakukan kelulusan';
         } else {
             $text_status = 'Kenaikan Kelas';
             $not_yet = 'Belum dilakukan kenaikan kelas';
         }
+        /*
+	if($get_siswa->rombongan_belajar->rombel_empat_tahun){
+		$text_status = 'Kenaikan Kelas';
+		$not_yet = 'Belum dilakukan kenaikan kelas';
+	} elseif($get_siswa->rombongan_belajar->tingkat >= 12 ){
+		$text_status = 'Status Kelulusan';
+		$not_yet = 'Belum dilakukan kelulusan';
+	} else {
+		$text_status = 'Kenaikan Kelas';
+		$not_yet = 'Belum dilakukan kenaikan kelas';
+	}
+	*/
     } else {
         $text_status = '';
         $not_yet = '';
@@ -252,22 +261,10 @@
             <td style="width:40%">
                 <p>{{ str_replace('Kab. ', '', $get_siswa->peserta_didik->sekolah->kabupaten) }},
                     {{ $tanggal_rapor }}<br>Wali Kelas</p><br>
-
-                @php
-
-                    $guruIdWithStrip = $get_siswa->rombongan_belajar->wali_kelas->guru_id; // Ganti dengan guru_id yang sesuai
-                    $guruId = str_replace('-', '', $guruIdWithStrip);
-                    $imageName = $guruId . '.png'; // Ganti dengan format nama file gambar yang sesuai
-                    $imagePath = 'storage/images/guru' . $imageName;
-                @endphp
-
-                @if (file_exists(public_path($imagePath)))
-                    <img src="{{ asset($imagePath) }}" style="width: 120px" alt="Gambar Guru">
-                @else
-                    <br />
-                    <br />
-                @endif
-
+                <br>
+                <br>
+                <br>
+                <br>
                 <br>
                 <p>
                     <u>{{ $get_siswa->rombongan_belajar->wali_kelas->nama_lengkap }}</u><br />
@@ -281,9 +278,10 @@
             </td>
             <td style="width:60%;">
                 <p>Mengetahui,<br>{{ get_setting('jabatan', $get_siswa->sekolah_id, $get_siswa->semester_id) }}</p>
-
                 <br>
-                <img src="{{ asset('storage/images/ttdkepsek.png') }}" style="width: 120px" />
+                <br>
+                <br>
+                <br>
                 <br>
                 <p><u>{{ $get_siswa->peserta_didik->sekolah->kasek ? $get_siswa->peserta_didik->sekolah->kasek->nama_lengkap : $get_siswa->peserta_didik->sekolah->kepala_sekolah->nama_lengkap }}</u><br />
                     NIP.
