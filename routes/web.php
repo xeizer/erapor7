@@ -51,5 +51,4 @@ Route::group(['prefix' => 'downloads'], function () {
 });
 Route::get('/maja/uploadttd', [MajaController::class, 'depanUploadTtd'])->middleware(['auth:sanctum']);
 Route::post('/maja/simpan/ttd', [MajaController::class, 'uploadttd'])->middleware(['auth:sanctum']);
-
 Route::get('/{any}', [ApplicationController::class, 'index'])->where('any', '.*');

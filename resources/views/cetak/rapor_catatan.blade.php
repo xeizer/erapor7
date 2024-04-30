@@ -31,71 +31,72 @@
         </tr>
     </table>
     <br />
-    <?php
-    if ($get_siswa->rombongan_belajar->tingkat == 10) {
-        if (merdeka($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum)) {
-            $huruf_ekskul = 'B';
-            $huruf_absen = 'C';
-            $huruf_kenaikan = 'D';
-        } else {
-            if ($get_siswa->all_prakerin->count()) {
-                $huruf_ekskul = 'C';
-                $huruf_absen = 'D';
-                $huruf_kenaikan = 'E';
-            } else {
+    @php
+        if ($get_siswa->rombongan_belajar->tingkat == 10) {
+            if (merdeka($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum)) {
                 $huruf_ekskul = 'B';
                 $huruf_absen = 'C';
                 $huruf_kenaikan = 'D';
+            } else {
+                if ($get_siswa->all_prakerin->count()) {
+                    $huruf_ekskul = 'C';
+                    $huruf_absen = 'D';
+                    $huruf_kenaikan = 'E';
+                } else {
+                    $huruf_ekskul = 'B';
+                    $huruf_absen = 'C';
+                    $huruf_kenaikan = 'D';
+                }
             }
-        }
-        /*if (strpos($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum, 'Merdeka') == false){
+            /*
+        if (strpos($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum, 'Merdeka') == false){
 		$huruf_ekskul = 'C';
 		$huruf_absen = 'D';
 		$huruf_kenaikan = 'E';
-	} else {
+	    } else {
 		$huruf_ekskul = 'B';
 		$huruf_absen = 'C';
 		$huruf_kenaikan = 'D';
-	}*/
-    } else {
-        if (merdeka($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum)) {
-            if ($get_siswa->all_prakerin->count()) {
-                $huruf_ekskul = 'C';
-                $huruf_absen = 'D';
-                $huruf_kenaikan = 'E';
-            } else {
-                $huruf_ekskul = 'B';
-                $huruf_absen = 'C';
-                $huruf_kenaikan = 'D';
-            }
+	    }*/
         } else {
-            if ($get_siswa->all_prakerin->count()) {
-                /*$huruf_ekskul = 'D';
-			$huruf_absen = 'E';
-			$huruf_kenaikan = 'F';*/
-                $huruf_ekskul = 'C';
-                $huruf_absen = 'D';
-                $huruf_kenaikan = 'E';
+            if (merdeka($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum)) {
+                if ($get_siswa->all_prakerin->count()) {
+                    $huruf_ekskul = 'C';
+                    $huruf_absen = 'D';
+                    $huruf_kenaikan = 'E';
+                } else {
+                    $huruf_ekskul = 'B';
+                    $huruf_absen = 'C';
+                    $huruf_kenaikan = 'D';
+                }
             } else {
-                /*$huruf_ekskul = 'D';
-			$huruf_absen = 'E';
-			$huruf_kenaikan = 'F';*/
-                $huruf_ekskul = 'B';
-                $huruf_absen = 'C';
-                $huruf_kenaikan = 'D';
+                if ($get_siswa->all_prakerin->count()) {
+                    /*$huruf_ekskul = 'D';
+                $huruf_absen = 'E';
+                $huruf_kenaikan = 'F';*/
+                    $huruf_ekskul = 'C';
+                    $huruf_absen = 'D';
+                    $huruf_kenaikan = 'E';
+                } else {
+                    /*$huruf_ekskul = 'D';
+                $huruf_absen = 'E';
+                $huruf_kenaikan = 'F';*/
+                    $huruf_ekskul = 'B';
+                    $huruf_absen = 'C';
+                    $huruf_kenaikan = 'D';
+                }
             }
+            /*if (strpos($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum, 'Merdeka') == false){
+                $huruf_ekskul = 'D';
+                $huruf_absen = 'E';
+                $huruf_kenaikan = 'F';
+                } else {
+                    $huruf_ekskul = 'C';
+                    $huruf_absen = 'D';
+                    $huruf_kenaikan = 'E';
+                }*/
         }
-        /*if (strpos($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum, 'Merdeka') == false){
-		$huruf_ekskul = 'D';
-		$huruf_absen = 'E';
-		$huruf_kenaikan = 'F';
-	} else {
-		$huruf_ekskul = 'C';
-		$huruf_absen = 'D';
-		$huruf_kenaikan = 'E';
-	}*/
-    }
-    ?>
+    @endphp
     @if ($get_siswa->rombongan_belajar->tingkat != 10 && $get_siswa->all_prakerin->count())
         @if (!merdeka($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum))
             <div class="strong"><strong>B.&nbsp;&nbsp;Praktik Kerja Lapangan</strong></div>
@@ -233,7 +234,7 @@
                 <td style="padding:10px;">
                     @if ($get_siswa->kenaikan)
                         @if ($get_siswa->kenaikan->status == 3)
-                            LULUS
+                            TELAH MENYELESAIKAN SATUAN PENDIDIKAN
                         @else
                             {{ status_kenaikan($get_siswa->kenaikan->status) }} {{ $get_siswa->kenaikan->nama_kelas }}
                         @endif
