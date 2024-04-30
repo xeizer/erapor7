@@ -49,15 +49,15 @@
                 }
             }
             /*
-        if (strpos($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum, 'Merdeka') == false){
-		$huruf_ekskul = 'C';
-		$huruf_absen = 'D';
-		$huruf_kenaikan = 'E';
-	    } else {
-		$huruf_ekskul = 'B';
-		$huruf_absen = 'C';
-		$huruf_kenaikan = 'D';
-	    }*/
+                if (strpos($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum, 'Merdeka') == false){
+                $huruf_ekskul = 'C';
+                $huruf_absen = 'D';
+                $huruf_kenaikan = 'E';
+                } else {
+                $huruf_ekskul = 'B';
+                $huruf_absen = 'C';
+                $huruf_kenaikan = 'D';
+                }*/
         } else {
             if (merdeka($get_siswa->rombongan_belajar->kurikulum->nama_kurikulum)) {
                 if ($get_siswa->all_prakerin->count()) {
