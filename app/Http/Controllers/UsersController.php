@@ -13,6 +13,7 @@ use App\Models\Peserta_didik;
 use App\Models\Rombongan_belajar;
 use App\Models\Ekstrakurikuler;
 use App\Models\Pembelajaran;
+use App\Models\Pekerjaan;
 use Validator;
 use Hash;
 class UsersController extends Controller
@@ -313,6 +314,83 @@ class UsersController extends Controller
     }
     public function profil(){
         return response()->json(auth()->user());
+    }
+    private function callback(){
+        return function($query){
+           $query->whereHas('anggota_rombel', function($query){
+              $query->where('peserta_didik_id', auth()->user()->peserta_didik_id);
+           });
+        };
+    }
+    public function profil_pd(){
+        $user = auth()->user();
+        $data = [
+                'header' => [
+                    'avatar' => $user->profile_photo_path,
+                    'nama' => $user->name,
+                    'nisn' => "NISN: $user->nisn",
+                    'coverImg' => '/images/profile/timeline.jpg',
+                ],
+                'pekerjaan' => Pekerjaan::orderBy('pekerjaan_id')->get(),
+                'pd' => Peserta_didik::with(['pekerjaan_ayah', 'pekerjaan_ibu', 'agama', 'kelas' => function($query){
+                    $query->where('jenis_rombel', 1);
+                    $query->where('rombongan_belajar.semester_id', request()->semester_id);
+                    $query->with([
+                        'kurikulum',
+                        'wali_kelas' => function($query){
+                           $query->select('guru_id', 'nama');
+                        },
+                        'pembelajaran' => function($query){
+                            $query->whereNotNull('kelompok_id');
+                            $query->whereNotNull('no_urut');
+                            $query->orderBy('mata_pelajaran_id');
+                            $query->with([
+                                'guru' => function($query){
+                                    $query->select('guru_id', 'nama');
+                                }, 
+                                'pengajar' => function($query){
+                                    $query->select('guru_id', 'nama');
+                                },
+                                'nilai_akhir_pengetahuan' => $this->callback(),
+                                'nilai_akhir_keterampilan' => $this->callback(),
+                                'nilai_akhir_kurmer' => $this->callback(),
+                            ]);
+                        },
+                     ]);
+                }])->find($user->peserta_didik_id),
+        ];
+        return response()->json($data);
+    }
+    public function nilai_semester(){
+        $data = Rombongan_belajar::where(function($query){
+            $query->where('semester_id', request()->semester_id);
+            $query->where('jenis_rombel', 1);
+            $query->whereHas('anggota_rombel', function($query){
+                $query->where('peserta_didik_id', request()->user()->peserta_didik_id);
+            });
+        })->with([
+            'kurikulum',
+            'wali_kelas' => function($query){
+               $query->select('guru_id', 'nama');
+            },
+            'pembelajaran' => function($query){
+                $query->whereNotNull('kelompok_id');
+                $query->whereNotNull('no_urut');
+                $query->orderBy('mata_pelajaran_id');
+                $query->with([
+                    'guru' => function($query){
+                        $query->select('guru_id', 'nama');
+                    }, 
+                    'pengajar' => function($query){
+                        $query->select('guru_id', 'nama');
+                    },
+                    'nilai_akhir_pengetahuan' => $this->callback(),
+                    'nilai_akhir_keterampilan' => $this->callback(),
+                    'nilai_akhir_kurmer' => $this->callback(),
+                ]);
+            },
+         ])->first();
+        return response()->json($data);
     }
     public function update_profile(){
         $user = auth()->user();
