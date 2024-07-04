@@ -228,11 +228,17 @@
                         <td style="text-align: left;">
                             <p>{{ str_replace('Kab. ', '', $get_siswa->peserta_didik->sekolah->kabupaten) }},
                                 {{ $tanggal_rapor }}<br>Wali Kelas</p><br>
-                            <br>
-                            <br>
-                            <br>
-                            <br>
-                            <br>
+                            @if ($get_siswa->rombongan_belajar->wali_kelas->ttd && $get_siswa->rombongan_belajar->wali_kelas->ttd->tampil == 'ya')
+                                <img src="{{ public_path($get_siswa->rombongan_belajar->wali_kelas->ttd->lokasi) }}"
+                                    style="width: 120px" />
+                            @else
+                                <br>
+                                <br>
+                                <br>
+                                <br>
+                                <br>
+                            @endif
+
                             <p>
                                 <strong><u>{{ $get_siswa->rombongan_belajar->wali_kelas->nama_lengkap }}</u></strong><br />
                                 NIP. {{ $get_siswa->rombongan_belajar->wali_kelas->nip }}
@@ -263,11 +269,16 @@
             </td>
             <td style="width:60%;">
                 <p>Mengetahui,<br>{{ $jabatan }}</p>
-                <br>
-                <br>
-                <br>
-                <br>
-                <br>
+                <br />
+                @if (App\Models\Guru::where('guru_id', $get_siswa->peserta_didik->sekolah->kasek->guru_id)->first()->ttd->tampil == 'ya')
+                    <img src="{{ public_path(App\Models\Guru::where('guru_id', $get_siswa->peserta_didik->sekolah->kasek->guru_id)->first()->ttd->lokasi) }}"
+                        style="width: 120px" />
+                @else
+                    <br>
+                    <br>
+                    <br>
+                    <br>
+                @endif
                 <p class="nama_ttd">
                     <strong><u>{{ $get_siswa->peserta_didik->sekolah->kasek ? $get_siswa->peserta_didik->sekolah->kasek->nama_lengkap : $get_siswa->peserta_didik->sekolah->kepala_sekolah->nama_lengkap }}</u></strong>
                 </p>
