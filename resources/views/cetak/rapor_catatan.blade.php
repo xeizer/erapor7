@@ -263,16 +263,14 @@
                 <p>{{ str_replace('Kab. ', '', $get_siswa->peserta_didik->sekolah->kabupaten) }},
                     {{ $tanggal_rapor }}<br>Wali Kelas</p><br>
                 <br>
-                @php
-
-                    $guruIdWithStrip = $get_siswa->rombongan_belajar->wali_kelas->guru_id; // Ganti dengan guru_id yang sesuai
-                    $guruId = str_replace('-', '', $guruIdWithStrip);
-                    $imageName = $guruId . '.png'; // Ganti dengan format nama file gambar yang sesuai
-                    $imagePath = 'storage/images/guru' . $imageName;
-                @endphp
-
-                @if (file_exists(public_path($imagePath)))
-                    <img src="{{ asset($imagePath) }}" style="width: 120px" alt="Gambar Guru">
+                @if ($get_siswa->rombongan_belajar->wali_kelas->ttd->tampil == 'ya')
+                    @if (file_exists(public_path($get_siswa->rombongan_belajar->wali_kelas->ttd->lokasi)))
+                        <img src="{{ public_path($get_siswa->rombongan_belajar->wali_kelas->ttd->lokasi) }}"
+                            style="width: 120px" alt="Gambar Guru">
+                    @else
+                        <br />
+                        <br />
+                    @endif
                 @else
                     <br />
                     <br />
@@ -289,9 +287,17 @@
             <td style="width:40%;">
             </td>
             <td style="width:60%;">
-                <p>Mengetahui,<br>{{ get_setting('jabatan', $get_siswa->sekolah_id, $get_siswa->semester_id) }}</p>
+                <p>Mengetahui,
+                    <br>{{ get_setting('jabatan', $get_siswa->sekolah_id, $get_siswa->semester_id) }}
+                </p>
                 <br>
-                <img src="{{ asset('storage/images/ttdkepsek.png') }}" style="width: 120px" />
+                @if (App\Models\Guru::where('guru_id', $get_siswa->peserta_didik->sekolah->kasek->guru_id)->first()->ttd == 'ya')
+                    <img src="{{ public_path(App\Models\Guru::where('guru_id', $get_siswa->peserta_didik->sekolah->kasek->guru_id)->first()->ttd->lokasi) }}"
+                        style="width: 120px" />
+                @else
+                    <br />
+                    <br />
+                @endif
                 <br>
                 <p><u>{{ $get_siswa->peserta_didik->sekolah->kasek ? $get_siswa->peserta_didik->sekolah->kasek->nama_lengkap : $get_siswa->peserta_didik->sekolah->kepala_sekolah->nama_lengkap }}</u><br />
                     NIP.

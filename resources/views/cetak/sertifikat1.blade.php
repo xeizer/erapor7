@@ -60,10 +60,13 @@
                     <br>
 
                     @if ($sekolah->kasek)
-                        <img
-                            src="{{ asset('storage/images/guru' . str_replace('-', '', $sekolah->kasek->guru_id) . '.png') }}" />
-                    @else
-                        <img src="{{ asset('storage/images/guru' . $sekolah->kepala_sekolah->nama_lengkap . '.png') }}" />
+                        @if (App\Models\Guru::where('guru_id', $sekolah->kasek->guru_id)->first()->ttd == 'ya')
+                            <img src="{{ public_path(App\Models\Guru::where('guru_id', $sekolah->kasek->guru_id)->first()->ttd->lokasi) }}"
+                                style="width: 120px" />
+                        @else
+                            <br />
+                            <br />
+                        @endif
                     @endif
                     <br>
                     <p><b>{{ $sekolah->kasek ? $sekolah->kasek->nama_lengkap : $sekolah->kepala_sekolah->nama_lengkap }}</b>
@@ -75,17 +78,22 @@
                 <td style="width:40%" class="text-center">
                     {{ $rencana_ukk->guru_eksternal->dudi ? $rencana_ukk->guru_eksternal->dudi->nama : '-' }}<br>
                     <br>
-                    @php
-                        $pathGuru =
-                            'storage/images/guru' .
-                            str_replace('-', '', $rencana_ukk->guru_eksternal->guru_id) .
-                            '.png';
-                    @endphp
-                    @if (file_exists(public_path($pathGuru)))
-                        <img src="{{ asset($pathGuru) }}" width="90px" />
+                    @if (App\Models\Guru::where('guru_id', $rencana_ukk->guru_eksternal->guru_id)->first()->ttd == 'ya')
+                        @if (file_exists(public_path(App\Models\Guru::where('guru_id', $rencana_ukk->guru_eksternal->guru_id)->first()->ttd->lokasi)))
+                            <img src="{{ public_path(App\Models\Guru::where('guru_id', $rencana_ukk->guru_eksternal->guru_id)->first()->ttd->lokasi) }}"
+                                style="width: 120px" alt="Gambar Guru">
+                        @else
+                            <br />
+                            <br />
+                        @endif
                     @else
-                        <br /><br /><br />
+                        <br />
+                        <br />
                     @endif
+
+
+
+
                     <br>
                     <p><b>{{ $rencana_ukk->guru_eksternal->nama_lengkap }}</b></p>
                     <p>Penguji Eksternal</p>

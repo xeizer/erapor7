@@ -190,14 +190,22 @@
                 {{ $get_siswa->peserta_didik->diterima }}<br />{{ get_setting('jabatan', $get_siswa->sekolah_id, $get_siswa->semester_id) }}
             </td>
         </tr>
+
         <tr>
-            <td style="width: 50%;padding:5px;">&nbsp;</td>
-        </tr>
-        <tr>
-            <td style="width: 50%;padding:5px;">&nbsp;</td>
-        </tr>
-        <tr>
-            <td style="width: 50%;padding:5px;">&nbsp;</td>
+            <td style="width: 50%;padding:5px;">
+
+                @if (App\Models\Guru::where('guru_id', $get_siswa->peserta_didik->sekolah->kasek->guru_id)->first()->ttd->tampil == 'ya')
+                    <img src="{{ public_path(App\Models\Guru::where('guru_id', $get_siswa->peserta_didik->sekolah->kasek->guru_id)->first()->ttd->lokasi) }}"
+                        style="width: 120px" />
+                @else
+                    &nbsp;<br>
+                    &nbsp;<br>
+                    &nbsp;<br>
+                    &nbsp;<br>
+                    &nbsp;
+                @endif
+
+            </td>
         </tr>
         <tr>
             <td style="width: 50%;padding:5px;">

@@ -26,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        //untuk ropor diserver gunakanini
         // $this->app->bind('path.public', function () {
         //     return base_path('/../public_html');
         // });
