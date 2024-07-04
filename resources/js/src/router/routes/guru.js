@@ -157,6 +157,25 @@ export default [
     },
   },
   {
+    path: '/penilaian/nilai-tengah-semester',
+    name: 'penilaian-nilai-tengah-semester',
+    component: () => import('@/views/penilaian/tengah-semester/Index.vue'),
+    meta: {
+      resource: 'Guru',
+      action: 'read',
+      pageTitle: 'Input Nilai Tengah Semester',
+      breadcrumb: [
+        {
+          text: 'Penilaian',
+        },
+        {
+          text: 'Input Nilai Tengah Semester',
+          active: true,
+        },
+      ],
+    },
+  },
+  {
     path: '/penilaian/nilai-akhir',
     name: 'penilaian-nilai-akhir',
     component: () => import('@/views/penilaian/NilaiAkhir.vue'),
@@ -233,6 +252,26 @@ export default [
         },
         {
           text: 'Tambah Data Nilai Sikap',
+          active: true,
+        },
+      ],
+      navActiveLink: 'penilaian-sikap',
+    },
+  },
+  {
+    path: '/penilaian/edit-nilai-sikap/:id',
+    name: 'penilaian-edit-sikap',
+    component: () => import('@/views/penilaian/InputPenilaianSikap.vue'),
+    meta: {
+      resource: 'Guru',
+      action: 'read',
+      pageTitle: 'Ubah Data Nilai Sikap',
+      breadcrumb: [
+        {
+          text: 'Penilaian',
+        },
+        {
+          text: 'Ubah Data Nilai Sikap',
           active: true,
         },
       ],

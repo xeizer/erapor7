@@ -5,7 +5,7 @@
         <template v-if="status_penilaian">
           <b-form @submit="onSubmit">
             <formulir ref="formulir" :meta="meta" :form="form" @show_form="handleShowForm" @hide_form="handleHideForm"></formulir>
-            <b-row>
+            <b-row v-if="!kunci_nilai">
               <b-col cols="12">
                 <b-form-group label="Bentuk Penilaian" label-for="bentuk_penilaian" label-cols-md="3" :invalid-feedback="meta.bentuk_penilaian_feedback" :state="meta.bentuk_penilaian_state">
                   <v-select id="bentuk_penilaian" v-model="form.bentuk_penilaian" :reduce="nama => nama.id" label="nama" :options="data_bentuk_penilaian" placeholder="== Pilih Bentuk Penilaian ==" :state="meta.bentuk_penilaian_state" @input="changeBentuk">
@@ -176,6 +176,7 @@ export default {
         }
       ],
       disabled: false,
+      kunci_nilai: false,
     }
   },
   created() {
@@ -215,8 +216,10 @@ export default {
               confirmButton: 'btn btn-success',
             },
           }).then(result => {
-            this.handleHideForm()
-            this.onReset()
+            if(data.success){
+              this.handleHideForm()
+              this.onReset()
+            }
           })
         }
       });
@@ -252,13 +255,6 @@ export default {
             } else {
               nilai[value.anggota_rombel_id] = value.nilai_asesmen
             }
-            /*const avg_nilai_tp = value.anggota_rombel.nilai_tp.reduce((total, next) => total + next.nilai, 0) / value.anggota_rombel.nilai_tp.length;
-            var nilai_tp = (avg_nilai_tp) ? Math.round(avg_nilai_tp) : ''
-            const avg_nilai_sumatif = value.anggota_rombel.nilai_sumatif.reduce((total, next) => total + next.nilai, 0) / value.anggota_rombel.nilai_sumatif.length;
-            var nilai_sumatif = (avg_nilai_sumatif) ? Math.round(avg_nilai_sumatif) : 0
-            var nilai_akhir = (nilai_tp + nilai_sumatif) / 2
-            //nilai[value.anggota_rombel.anggota_rombel_id] = (value.anggota_rombel.nilai_akhir_mapel) ? value.anggota_rombel.nilai_akhir_mapel.nilai : ''
-            nilai[value.anggota_rombel.anggota_rombel_id] = (nilai_akhir) ? Math.round(nilai_akhir) : ''*/
             value.capaian_kompeten.forEach(function(capaian, index) {
               kompeten[value.anggota_rombel_id+'#'+capaian.tp_id] = capaian.kompeten
             })
@@ -268,8 +264,9 @@ export default {
         })
       }
     },
-    handleShowForm(){
-      console.log('show_form');
+    handleShowForm(val){
+      this.form.bentuk_penilaian = ''
+      this.kunci_nilai = val
     },
     calculateAverage(array) {
       var total = 0;

@@ -146,13 +146,16 @@ class PdController extends Controller
             $query->where('rombongan_belajar_id', request()->rombongan_belajar_id);
         })->orderBy('nama')->get();
         $merdeka = FALSE;
+        $rombel = NULL;
         if(request()->aksi == 'cetak-rapor'){
             $rombel = Rombongan_belajar::find(request()->rombongan_belajar_id);
             $merdeka = Str::of($rombel->kurikulum->nama_kurikulum)->contains('Merdeka');
         }
         return response()->json([
             'data_siswa' => $data,
-            'merdeka' => $merdeka
+            'merdeka' => $merdeka,
+            'rapor_pts' => config('erapor.rapor_pts'),
+            'is_ppa' => ($rombel) ? is_ppa($rombel->semester_id) : false,
         ]);
     }
     public function unduh_legger(){
@@ -173,18 +176,21 @@ class PdController extends Controller
             $query->where('sekolah_id', request()->sekolah_id);
             $query->where('guru_id', $rombel->guru_id);
         })->with([
+            'all_nilai_akhir_pengetahuan',
+            'all_nilai_akhir_keterampilan',
+            'all_nilai_akhir_pk',
             'all_nilai_akhir_kurmer',
-            'all_nilai_akhir_pengetahuan'
         ])->where(function($query){
             $query->whereNotNull('kelompok_id');
             $query->whereNotNull('no_urut');
             $query->whereNull('induk_pembelajaran_id');
         })->orderBy('kelompok_id', 'asc')->orderBy('no_urut', 'asc')->get();
         $data = [
-            'merdeka' => ($rombel) ? Str::contains($rombel->kurikulum->nama_kurikulum, 'Merdeka') : FALSE,
+            'merdeka' => ($rombel) ? merdeka($rombel->kurikulum->nama_kurikulum) : FALSE,
             'rombel' => $rombel,
             'data_siswa' => $data_siswa,
             'pembelajaran' => $pembelajaran,
+            'is_ppa' => is_ppa($rombel->semester_id),
         ];
         return response()->json($data);
     }

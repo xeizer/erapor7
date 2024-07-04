@@ -122,23 +122,43 @@
                 <b-tr>
                   <b-td>Group Diskusi</b-td>
                   <b-td>
-                    <a href="https://www.facebook.com/groups/2003597939918600/" target="_blank"><font-awesome-icon :icon="['fab', 'facebook']" /> FB Group</a> 
-                    <a href="http://t.me/eRaporSMK" target="_blank"><font-awesome-icon :icon="['fab', 'telegram']" /> Telegram</a>
-                  </b-td>
-                </b-tr>
-                <b-tr>
-                  <b-td>Tim Helpdesk</b-td>
-                  <b-td>
                     <div class="btn-group-vertical">
-                      <a target="_blank" :href="`https://api.whatsapp.com/send?phone=628156441864&text=NPSN:${sekolah.npsn}`"><font-awesome-icon :icon="['fab', 'whatsapp']" /> Wahyudin [08156441864]</a>
-                      <a target="_blank" :href="`https://api.whatsapp.com/send?phone=6281229997730&amp;text=NPSN:${sekolah.npsn}`"><font-awesome-icon :icon="['fab', 'whatsapp']" /> Ahmad Aripin [081229997730]</a>
-                      <a target="_blank" :href="`https://api.whatsapp.com/send?phone=6282113057512&amp;text=NPSN:${sekolah.npsn}`"><font-awesome-icon :icon="['fab', 'whatsapp']" /> Iman [082113057512]</a>
-                      <a target="_blank" :href="`https://api.whatsapp.com/send?phone=6282174508706&amp;text=NPSN:${sekolah.npsn}`"><font-awesome-icon :icon="['fab', 'whatsapp']" /> Ikhsan [082174508706]</a>
-                      <a target="_blank" :href="`https://api.whatsapp.com/send?phone=6285643935009&amp;text=NPSN:${sekolah.npsn}`"><font-awesome-icon :icon="['fab', 'whatsapp']" /> Adhi Prasetya [085643935009]</a>
-                      <!--a target="_blank" :href="`https://api.whatsapp.com/send?phone=6285624669298&amp;text=NPSN:${sekolah.npsn}`"><font-awesome-icon :icon="['fab', 'whatsapp']" /> Deetha [085624669298]</a-->
+                      <a href="https://www.facebook.com/groups/2003597939918600/" target="_blank"><font-awesome-icon :icon="['fab', 'facebook']" /> FB Group</a> 
+                      <a href="http://t.me/eRaporSMK" target="_blank"><font-awesome-icon :icon="['fab', 'telegram']" /> Telegram</a>
+                      <a target="_blank" href="https://chat.whatsapp.com/DMHsy6IvOv36rVTw1V3xzS"><font-awesome-icon :icon="['fab', 'whatsapp']" /> Whatsapp 1</a>
+                      <a target="_blank" href="https://chat.whatsapp.com/F8LfJ0y3JYlCswou4t9cYU"><font-awesome-icon :icon="['fab', 'whatsapp']" /> Whatsapp 2</a>
                     </div>
                   </b-td>
                 </b-tr>
+              </b-table-simple>
+            </template>
+          </b-card-body>
+        </b-card>
+        <b-card no-body>
+          <b-card-body>
+            <template v-if="isBusy">
+              <div class="text-center text-danger my-2">
+                <b-spinner class="align-middle"></b-spinner>
+                <strong>Loading...</strong>
+              </div>
+            </template>
+            <template v-else>
+              <h4 class="card-title">Helpdesk e-Rapor SMK</h4>
+              <b-table-simple bordered hover responsive>
+                <b-thead>
+                  <b-tr>
+                    <b-th class="text-center">Nama</b-th>
+                    <b-th class="text-center">Instansi</b-th>
+                    <b-th class="text-center"><font-awesome-icon :icon="['fab', 'whatsapp']" /></b-th>
+                  </b-tr>
+                </b-thead>
+                <b-tbody>
+                  <b-tr v-for="hd in helpdesk" :key="hd.hp">
+                    <b-td>{{hd.nama}}</b-td>
+                    <b-td>{{hd.instansi}}</b-td>
+                    <b-td class="text-center"><a target="_blank" :href="`https://wa.me/${hd.hp}/?text=${text_wa}`"><font-awesome-icon :icon="['fab', 'whatsapp']" /></a></b-td>
+                  </b-tr>
+                </b-tbody>
               </b-table-simple>
             </template>
           </b-card-body>
@@ -152,7 +172,7 @@
 
 <script>
 import vc from 'version_compare'
-import { BRow, BCol, BCard, BCardBody, BSpinner, BTableSimple, BTr, BTd, BFormCheckbox, VBTooltip } from 'bootstrap-vue'
+import { BRow, BCol, BCard, BCardBody, BSpinner, BTableSimple, BThead, BTbody,  BTr, BTh, BTd, BFormCheckbox, VBTooltip } from 'bootstrap-vue'
 
 export default {
   components: {
@@ -162,7 +182,10 @@ export default {
     BCardBody,
     BSpinner,
     BTableSimple,
+    BThead,
+    BTbody,
     BTr, 
+    BTh,
     BTd,
     BFormCheckbox,
     VBTooltip
@@ -177,6 +200,8 @@ export default {
       sekolah: null,
       aplikasi: null,
       app: {},
+      helpdesk: [],
+      text_wa: null,
     }
   },
   created() {
@@ -191,12 +216,12 @@ export default {
       this.rekapitulasi = getData.rekap
       this.app = getData.app
       this.status_penilaian = this.app.status_penilaian
-      console.log(vc.compare(this.app.app_version, app_version));
+      this.text_wa = getData.text_wa
+      this.helpdesk = getData.helpdesk
     })
   },
   methods: {
     changeStatus(val){
-      console.log(val);
       var text;
       if(val){
         text = 'Penilaian akan di aktifkan'

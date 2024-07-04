@@ -33,6 +33,10 @@ class Rombongan_belajar extends Model
 	{
 		return $this->hasMany(Pembelajaran::class, 'rombongan_belajar_id', 'rombongan_belajar_id');
 	}
+	public function mapel()
+	{
+		return $this->hasOne(Pembelajaran::class, 'rombongan_belajar_id', 'rombongan_belajar_id');
+	}
 	public function projek()
 	{
 		return $this->hasOne(Pembelajaran::class, 'rombongan_belajar_id', 'rombongan_belajar_id')->where(function($query){
@@ -63,6 +67,10 @@ class Rombongan_belajar extends Model
 	public function anggota_rombel()
 	{
 		return $this->hasMany(Anggota_rombel::class, 'rombongan_belajar_id', 'rombongan_belajar_id');
+	}
+	public function single_anggota_rombel()
+	{
+		return $this->hasOne(Anggota_rombel::class, 'rombongan_belajar_id', 'rombongan_belajar_id');
 	}
 	public function kelas_ekskul(){
 		return $this->hasOne(Ekstrakurikuler::class, 'rombongan_belajar_id', 'rombongan_belajar_id');

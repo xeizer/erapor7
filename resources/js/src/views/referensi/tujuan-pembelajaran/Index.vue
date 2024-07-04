@@ -102,6 +102,7 @@ export default {
       this.loadPostsData()
     },
     loadPostsData() {
+      console.log(this.current_page);
       this.loading = true
       let current_page = this.current_page//this.search == '' ? this.current_page : 1
       this.$http.get('/referensi/tujuan-pembelajaran', {
@@ -143,6 +144,7 @@ export default {
       })
     },
     handlePerPage(val) {
+      console.log(val);
       this.per_page = val 
       this.loadPostsData() 
     },
@@ -162,7 +164,6 @@ export default {
       }
     },
     handleAksi(val){
-      console.log(val);
       if(val.aksi == 'edit'){
         eventBus.$emit('open-modal-edit-tp', val.item);
       }
@@ -237,7 +238,6 @@ export default {
         let getData = response.data
         this.data_tingkat_tp = getData.tingkat
         this.$refs['tp-mapel'].show()
-        console.log(getData);
       });
     },
     changeTingkatTp(val){

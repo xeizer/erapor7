@@ -63,6 +63,11 @@
           <b-form-input id="instruktur" v-model="form.instruktur" placeholder="Nama Lengkap Instruktur" :state="state.instruktur" />
         </b-form-group>
       </b-col>
+      <b-col cols="12">
+        <b-form-group label="NIP" label-for="nip" label-cols-md="3">
+          <b-form-input id="nip" v-model="form.nip" placeholder="NIP Instruktur (Jika ada)" />
+        </b-form-group>
+      </b-col>
       <b-col cols="12" v-if="show_tp">
         <b-form-group label="Tujuan Pembelajaran" label-cols-md="3" v-slot="{ ariaDescribedby }">
           <template v-if="data_tp.length">
@@ -120,6 +125,7 @@ export default {
         tanggal_mulai: '',
         tanggal_selesai: '',
         instruktur: '',
+        nip: '',
         tp_id: [],
       },
       state: {
@@ -187,6 +193,7 @@ export default {
       this.form.tanggal_mulai = ''
       this.form.tanggal_selesai = ''
       this.form.instruktur = ''
+      this.form.nip = ''
       this.state.tingkat = null
       this.state.rombongan_belajar_id = null
       this.state.dudi_id = null
@@ -211,7 +218,6 @@ export default {
       this.$http.post('/praktik-kerja-lapangan/simpan', this.form).then(response => {
         this.loading_modal = false
         var data = response.data
-        console.log(data);
         if(data.errors){
           this.state.tingkat = (data.errors.tingkat) ? false : null
           this.state.rombongan_belajar_id = (data.errors.rombongan_belajar_id) ? false : null
@@ -254,6 +260,7 @@ export default {
       this.form.tanggal_mulai = ''
       this.form.tanggal_selesai = ''
       this.form.instruktur = ''
+      this.form.nip = ''
       if(val){
         this.state.tingkat = null
         this.loading_rombel = true
@@ -275,6 +282,7 @@ export default {
       this.form.tanggal_mulai = ''
       this.form.tanggal_selesai = ''
       this.form.instruktur = ''
+      this.form.nip = ''
       if(val){
         this.state.rombongan_belajar_id = null
         this.loading_dudi = true
@@ -295,6 +303,7 @@ export default {
       this.form.tanggal_mulai = ''
       this.form.tanggal_selesai = ''
       this.form.instruktur = ''
+      this.form.nip = ''
       if(val){
         this.state.dudi_id = null
         this.loading_akt_pd = true
@@ -314,6 +323,7 @@ export default {
       this.form.tanggal_mulai = ''
       this.form.tanggal_selesai = ''
       this.form.instruktur = ''
+      this.form.nip = ''
       if(val){
         this.state.akt_pd_id = null
         this.loading_tp = true

@@ -1,4 +1,5 @@
 <?php 
+use Carbon\Carbon;
 use App\Models\Setting;
 use App\Models\Peserta_didik;
 use App\Models\Agama;
@@ -90,6 +91,7 @@ function terbilang($angka){
     }
 }
 function predikat($kkm, $nilai, $produktif = NULL){
+    $nilai = strtoupper($nilai);
     if ($produktif) {
         $result = array(
             'A+'	=> 100, // 95 - 100
@@ -151,23 +153,23 @@ function konversi_huruf($kkm, $nilai, $produktif = NULL, $semester_id = NULL){
         $b = predikat($kkm, 'b') + 1;
         $c = predikat($kkm, 'c') + 1;
         $d = predikat($kkm, 'd') + 1;
-        if ($n == 0) {
+        if ($nilai == 0) {
             $predikat 	= '-';
             $sikap		= '-';
             $sikap_full	= '-';
-        } elseif ($n >= $b) { //$settings->a_min){ //86
+        } elseif ($nilai >= $b) { //$settings->a_min){ //86
             $predikat 	= 'A';
             $sikap		= 'SB';
             $sikap_full	= 'Sangat Baik';
-        } elseif ($n >= $c) { //71
+        } elseif ($nilai >= $c) { //71
             $predikat 	= 'B';
             $sikap		= 'B';
             $sikap_full	= 'Baik';
-        } elseif ($n >= $d) { //56
+        } elseif ($nilai >= $d) { //56
             $predikat 	= 'C';
             $sikap		= 'C';
             $sikap_full	= 'Cukup';
-        } elseif ($n < $d) { //56
+        } elseif ($nilai < $d) { //56
             $predikat 	= 'D';
             $sikap		= 'K';
             $sikap_full	= 'Kurang';
@@ -347,7 +349,9 @@ function table_sync(){
         'users',
         'unit_ukk',
         'tujuan_pembelajaran',
+        'tp_pkl',
         'tp_nilai',
+        'tp_mapel',
         'sekolah',
         'rombongan_belajar',
         'rombel_4_tahun',
@@ -357,9 +361,11 @@ function table_sync(){
         'rapor_pts',
         'ptk_keluar',
         'prestasi',
+        'praktik_kerja_lapangan',
         'prakerin',
         'peserta_didik',
         'pembelajaran',
+        'pd_pkl',
         'pd_keluar',
         'nilai_us',
         'nilai_un',
@@ -369,6 +375,8 @@ function table_sync(){
         'nilai_sikap',
         'nilai_remedial',
         'nilai_rapor',
+        'nilai_pts',
+        'nilai_pkl',
         'nilai_karakter',
         'nilai_ekstrakurikuler',
         'nilai_budaya_kerja',
@@ -378,6 +386,7 @@ function table_sync(){
         'kewirausahaan',
         'kenaikan_kelas',
         'kd_nilai',
+        'kasek',
         'jurusan_sp',
         'guru',
         'gelar_ptk',
@@ -396,6 +405,7 @@ function table_sync(){
         'anggota_kewirausahaan',
         'anggota_akt_pd',
         'akt_pd',
+        'absensi_pkl',
         'absensi',
     ];
 }
@@ -407,15 +417,12 @@ function get_table($table, $sekolah_id, $tahun_ajaran_id, $semester_id, $count =
                       ->from('users')
                       ->whereColumn('ref.kompetensi_dasar.user_id', 'users.user_id');
             });
-            $query->whereRaw('updated_at > last_sync');
         }
         if(in_array($table, ['ref.paket_ukk', 'users']) || Schema::hasColumn($table, 'sekolah_id')){
             $query->where('sekolah_id', $sekolah_id);
-            $query->whereRaw('updated_at > last_sync');
         }
         if(in_array($table, ['ref.capaian_pembelajaran'])){
             $query->where('is_dir', 0);
-            $query->whereRaw('updated_at > last_sync');
         }
         if (Schema::hasColumn($table, 'tahun_ajaran_id')) {
             $query->where('tahun_ajaran_id', $tahun_ajaran_id);
@@ -445,6 +452,13 @@ function http_client($satuan, $data_sync){
     ])->withHeaders([
         'x-api-key' => $data_sync['sekolah_id'],
     ])->retry(3, 100)->post(config('erapor.api_url').$satuan, $data_sync);
+    return $response->object();
+}
+function http_dashboard($satuan, $data_sync){
+    $response = Http::withOptions([
+        'verify' => false,
+        //'debug' => config('app.debug') ? fopen('php://stderr', 'w') : FALSE,
+    ])->retry(3, 100)->post(config('erapor.dashboard_url').$satuan, $data_sync);
     return $response->object();
 }
 function merdeka($nama_kurikulum){
@@ -497,4 +511,23 @@ function check_2018($semester_id){
     } else {
         return false;
     }
+}
+function jam_sinkron(){
+    $timezone = config('app.timezone');
+    $start = Carbon::create(date('Y'), date('m'), date('d'), '00', '00', '01', 'Asia/Jakarta');
+    $end = Carbon::create(date('Y'), date('m'), date('d'), '03', '00', '00', 'Asia/Jakarta');
+    $now = Carbon::now()->timezone($timezone);
+    $jam_sinkron = Carbon::now()->timezone($timezone)->isBetween($start, $end, false);
+    return $jam_sinkron;
+}
+function is_ppa($semester_id){
+    return ($semester_id >= 20221);
+}
+function get_string_between($string, $start, $end){
+    $string = ' ' . $string;
+    $ini = strpos($string, $start);
+    if ($ini == 0) return '';
+    $ini += strlen($start);
+    $len = strpos($string, $end, $ini) - $ini;
+    return substr($string, $ini, $len);
 }

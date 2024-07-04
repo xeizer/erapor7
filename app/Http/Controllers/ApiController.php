@@ -20,6 +20,17 @@ class ApiController extends Controller
         $sekolah = Sekolah::with(['kasek' => function($query){
             $query->where('semester_id', request()->semester_id);
         }])->find(request()->sekolah_id);
+        if($sekolah->logo_sekolah && !get_setting('logo_sekolah', request()->sekolah_id)){
+            Setting::updateOrCreate(
+                [
+                    'key' => 'logo_sekolah',
+                    'sekolah_id' => request()->sekolah_id,
+                ],
+                [
+                    'value' => '/storage/images/'.$sekolah->logo_sekolah,
+                ]
+            );
+        }
         $get_rombel_4_tahun = Rombel_empat_tahun::with(['rombongan_belajar'])->where('sekolah_id', request()->sekolah_id)->where('semester_id', request()->semester_id)->get();
         $rombel_4_tahun = Rombel_empat_tahun::where('sekolah_id', request()->sekolah_id)->where('semester_id', request()->semester_id)->get();
         $plucked = $rombel_4_tahun->pluck('rombongan_belajar_id');
@@ -28,7 +39,7 @@ class ApiController extends Controller
             'semester' => Semester::whereHas('tahun_ajaran', function($query){
                 $query->where('periode_aktif', 1);
             })->orderBy('semester_id', 'DESC')->get(),
-            //'tanggal_rapor_uts' => get_setting('tanggal_rapor_uts', request()->sekolah_id, request()->semester_id),
+            'tanggal_rapor_pts' => get_setting('tanggal_rapor_pts', request()->sekolah_id, request()->semester_id),
             'tanggal_rapor' => get_setting('tanggal_rapor', request()->sekolah_id, request()->semester_id),
             'tanggal_rapor_kelas_akhir' => get_setting('tanggal_rapor_kelas_akhir', request()->sekolah_id, request()->semester_id),
             'kepala_sekolah' => ($sekolah->kasek) ? $sekolah->kasek->guru_id : $sekolah->guru_id,
@@ -44,16 +55,18 @@ class ApiController extends Controller
             'rombel_4_tahun' => $plucked->all(),
             'url_dapodik' => get_setting('url_dapodik', request()->sekolah_id, request()->semester_id),
             'token_dapodik' => get_setting('token_dapodik', request()->sekolah_id, request()->semester_id),
-            'logo_sekolah' => $sekolah->logo_sekolah,
+            //'logo_sekolah' => $sekolah->logo_sekolah,
+            'logo_sekolah' => get_setting('logo_sekolah', request()->sekolah_id),
             'periode' => substr(request()->semester_id, -1),
             'sekolah' => $sekolah,
+            'rapor_pts' => config('erapor.rapor_pts'),
         ];
         return response()->json($data);
     }
     public function update(Request $request){
         $request->validate(
             [
-                //'kepala_sekolah' => 'required',
+                'jabatan' => 'required',
                 'semester_id' => 'required',
                 'zona' => 'required',
                 'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:1024',
@@ -61,7 +74,7 @@ class ApiController extends Controller
             [
                 'semester_id.required' => 'Periode Aktif tidak boleh kosong.',
                 'zona.required' => 'Zona Waktu tidak boleh kosong.',
-                'kepala_sekolah.required' => 'Kepala sekolah tidak boleh kosong.',
+                'jabatan.required' => 'Jabatan Kepala sekolah tidak boleh kosong.',
                 'photo.image' => 'Logo sekolah harus berupa berkas gambar',
                 'photo.mimes' => 'Logo sekolah harus berekstensi (jpg, jpeg, png)',
                 'photo.max' => 'Logo sekolah maksimal 1Mb.',
@@ -80,6 +93,18 @@ class ApiController extends Controller
                 ],
                 [
                     'value' => $request->tanggal_rapor,
+                ]
+            );
+        }
+        if($request->tanggal_rapor_pts){
+            Setting::updateOrCreate(
+                [
+                    'key' => 'tanggal_rapor_pts',
+                    'sekolah_id' => $request->sekolah_id,
+                    'semester_id' => $request->semester_aktif,
+                ],
+                [
+                    'value' => $request->tanggal_rapor_pts,
                 ]
             );
         }
@@ -168,6 +193,15 @@ class ApiController extends Controller
             $logo_sekolah = $request->photo->store('public/images');
             $sekolah->logo_sekolah = basename($logo_sekolah);
             $sekolah->save();
+            Setting::updateOrCreate(
+                [
+                    'key' => 'logo_sekolah',
+                    'sekolah_id' => request()->sekolah_id,
+                ],
+                [
+                    'value' => '/storage/images/'.basename($logo_sekolah),
+                ]
+            );
         }
         //$sekolah->guru_id = $request->kepala_sekolah;
         Kasek::updateOrCreate(
@@ -197,7 +231,7 @@ class ApiController extends Controller
         return response()->json($data);
     }
     public function unduhan(){
-        $data = ['data' => 'unduhan'];
+        $data = ['data' => view('unduhan')->render()];
         return response()->json($data);
     }
     public function changelog(){

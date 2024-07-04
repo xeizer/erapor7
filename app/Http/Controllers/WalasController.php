@@ -53,7 +53,7 @@ class WalasController extends Controller
         })->orderBy('nama')->get() : NULL;
         $data = [
             'rombel' => $rombel,
-            'merdeka' => ($rombel) ? Str::contains($rombel->kurikulum->nama_kurikulum, 'Merdeka') : FALSE,
+            'merdeka' => ($rombel) ? merdeka($rombel->kurikulum->nama_kurikulum) : FALSE,
             'data_siswa' => $data_siswa,
             'budaya_kerja' => $budaya_kerja,
         ];
@@ -125,7 +125,7 @@ class WalasController extends Controller
         $merdeka = FALSE;
         $notif = NULL;
         if($rombel){
-            $merdeka = Str::contains($rombel->kurikulum->nama_kurikulum, 'Merdeka');
+            $merdeka = merdeka($rombel->kurikulum->nama_kurikulum);
             $tingkat = $rombel->tingkat;
             if(Str::contains($rombel->kurikulum->nama_kurikulum, '2013')){
                 $tingkat_allowed = 11;
@@ -477,8 +477,10 @@ class WalasController extends Controller
             });
         })->orderBy('nama')->get();
         $data = [
-            'merdeka' => ($rombel) ? Str::contains($rombel->kurikulum->nama_kurikulum, 'Merdeka') : FALSE,
+            'merdeka' => ($rombel) ? merdeka($rombel->kurikulum->nama_kurikulum) : FALSE,
             'data_siswa' => $data_siswa,
+            'rapor_pts' => config('erapor.rapor_pts'),
+            'is_ppa' => is_ppa($rombel->semester_id),
         ];
         return response()->json($data);
     }
@@ -514,17 +516,19 @@ class WalasController extends Controller
             }
         })->with([
             'all_nilai_akhir_kurmer',
-            'all_nilai_akhir_pengetahuan'
+            'all_nilai_akhir_pengetahuan',
+            'all_nilai_akhir_keterampilan'
         ])->where(function($query){
             $query->whereNotNull('kelompok_id');
             $query->whereNotNull('no_urut');
             $query->whereNull('induk_pembelajaran_id');
         })->orderBy('kelompok_id', 'asc')->orderBy('no_urut', 'asc')->get();
         $data = [
-            'merdeka' => ($rombel) ? Str::contains($rombel->kurikulum->nama_kurikulum, 'Merdeka') : FALSE,
+            'merdeka' => ($rombel) ? merdeka($rombel->kurikulum->nama_kurikulum) : FALSE,
             'rombel' => $rombel,
             'data_siswa' => $data_siswa,
             'pembelajaran' => $pembelajaran,
+            'is_ppa' => is_ppa($rombel->semester_id),
         ];
         return response()->json($data);
     }

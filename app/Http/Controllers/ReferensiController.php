@@ -78,7 +78,7 @@ class ReferensiController extends Controller
             'tahun_ajaran_id'	=> $semester->tahun_ajaran_id,
             'semester_id'		=> $semester->semester_id,
             'sekolah_id'		=> request()->sekolah_id,
-            'satuan'			=> request()->rombongan_belajar_id,
+            'rombongan_belajar_id' => request()->rombongan_belajar_id,
         ];
         $return = http_client('anggota_ekskul_by_rombel', $data_sync);
         if($return){
@@ -875,7 +875,7 @@ class ReferensiController extends Controller
     }
     public function get_mapel(){
         $rombel = Rombongan_belajar::find(request()->rombongan_belajar_id);
-        $merdeka = (Str::contains($rombel->kurikulum->nama_kurikulum, 'Merdeka')) ? TRUE : FALSE;
+        $merdeka = (merdeka($rombel->kurikulum->nama_kurikulum)) ? TRUE : FALSE;
         $data = Pembelajaran::where($this->kondisiPembelajaran())->orderBy('mata_pelajaran_id', 'asc')->get();
         return response()->json(['status' => 'success', 'data' => $data, 'merdeka' => $merdeka]);
     }

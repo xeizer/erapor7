@@ -47,10 +47,18 @@ export default [
         },
         {
           icon: 'hand-point-right',
-          title: 'Unduh Legger',
+          title: 'Unduh Leger',
           route: 'progress-unduh-legger',
           resource: 'Waka',
           action: 'read',
+        },
+        {
+          icon: 'hand-point-right',
+          title: 'Cetak Buku Induk',
+          route: 'progress-buku-induk',
+          resource: 'Waka',
+          action: 'read',
+          uts: true,
         },
       ]
     },

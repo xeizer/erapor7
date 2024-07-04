@@ -64,7 +64,11 @@ class ProgressController extends Controller
             'nama_mata_pelajaran' => $item->nama_mata_pelajaran,
             'guru' => $item->guru_pengajar_id ? $item->pengajar->nama_lengkap : $item->guru->nama_lengkap,
             'pd' => $item->anggota_rombel_count,
-            'pd_dinilai' => $this->anggota_dinilai($item->pembelajaran_id),
+            'pd_dinilai' => $this->anggota_dinilai($item->pembelajaran_id, $item->rombongan_belajar_id),
+            'kkm' => $item->kkm,
+            'kelompok_id' => $item->kelompok_id,
+            'semester_id' => $item->semester_id,
+            'rombongan_belajar_id' => $item->rombongan_belajar_id,
          ];
       }
       $data = [
@@ -77,8 +81,9 @@ class ProgressController extends Controller
       ];
       return response()->json(['status' => 'success', 'data' => $data]);
    }
-   public function anggota_dinilai($pembelajaran_id){
-      $data = Anggota_rombel::whereHas('nilai_akhir_mapel', function($query) use ($pembelajaran_id){
+   public function anggota_dinilai($pembelajaran_id, $rombongan_belajar_id){
+      $data = Anggota_rombel::whereHas('nilai_akhir', function($query) use ($pembelajaran_id, $rombongan_belajar_id){
+         $query->where('rombongan_belajar_id', $rombongan_belajar_id);
          $query->where('pembelajaran_id', $pembelajaran_id);
       })->count();
       return $data;
@@ -91,12 +96,19 @@ class ProgressController extends Controller
                $query->with([
                   'nilai_akhir_kurmer' => function($query){
                      $query->where('pembelajaran_id', request()->pembelajaran_id);
+                     $query->where('rombongan_belajar_id', request()->rombongan_belajar_id);
                   },
                   'nilai_akhir_pengetahuan' => function($query){
                      $query->where('pembelajaran_id', request()->pembelajaran_id);
+                     $query->where('rombongan_belajar_id', request()->rombongan_belajar_id);
+                  },
+                  'nilai_akhir_keterampilan' => function($query){
+                     $query->where('pembelajaran_id', request()->pembelajaran_id);
+                     $query->where('rombongan_belajar_id', request()->rombongan_belajar_id);
                   },
                   'deskripsi_mapel' => function($query){
                      $query->where('pembelajaran_id', request()->pembelajaran_id);
+                     $query->where('rombongan_belajar_id', request()->rombongan_belajar_id);
                   },
                   'agama',
                ]);
@@ -104,7 +116,7 @@ class ProgressController extends Controller
          }])->find(request()->pembelajaran_id);
          $data = [
             'data_siswa' => $pembelajaran->rombongan_belajar->pd,
-            'merdeka' => Str::contains($pembelajaran->rombongan_belajar->kurikulum->nama_kurikulum, 'Merdeka'),
+            'merdeka' => merdeka($pembelajaran->rombongan_belajar->kurikulum->nama_kurikulum),
             'title' => 'Detil Penilaian Mata Pelajaran '.$pembelajaran->nama_mata_pelajaran,
          ];
       } elseif(request()->aksi == 'projek'){
@@ -261,23 +273,26 @@ class ProgressController extends Controller
       $data = Rencana_ukk::where(function($query){
          $query->where('sekolah_id', request()->sekolah_id);
          $query->where('semester_id', request()->semester_id);
-     })->with([
-         'paket_ukk',
-         'guru_internal' => function($query){
-             $query->select('guru_id', 'nama');
-         },
-         'guru_eksternal' => function($query){
-             $query->select('guru_id', 'nama');
-         },
-     ])->withCount('pd')
-     ->orderBy(request()->sortby, request()->sortbydesc)
-     ->when(request()->q, function($query) {
-         $query->whereHas('paket_ukk', function($query){
-             $query->where('nama_paket_id', 'ILIKE', '%' . request()->q . '%');
-             $query->orWhere('nama_paket_en', 'ILIKE', '%' . request()->q . '%');
-         });
-     })->paginate(request()->per_page);
-     return response()->json(['status' => 'success', 'data' => $data]);
+      })->withWhereHas('paket_ukk', function($query){
+         $query->with(['jurusan' => function($query){
+            $query->select('jurusan_id', 'nama_jurusan');
+         }]);
+      })->with([
+            'guru_internal' => function($query){
+               $query->select('guru_id', 'nama');
+            },
+            'guru_eksternal' => function($query){
+               $query->select('guru_id', 'nama');
+            },
+      ])->withCount('pd')
+      ->orderBy(request()->sortby, request()->sortbydesc)
+      ->when(request()->q, function($query) {
+            $query->whereHas('paket_ukk', function($query){
+               $query->where('nama_paket_id', 'ILIKE', '%' . request()->q . '%');
+               $query->orWhere('nama_paket_en', 'ILIKE', '%' . request()->q . '%');
+            });
+      })->paginate(request()->per_page);
+      return response()->json(['status' => 'success', 'data' => $data]);
    }
    public function nilai_pkl(){
       $data = Praktik_kerja_lapangan::where(function($query){
@@ -300,5 +315,33 @@ class ProgressController extends Controller
          });
      })->paginate(request()->per_page);
      return response()->json(['status' => 'success', 'data' => $data]);
+   }
+   public function peserta_didik(){
+      $data = Peserta_didik::withWhereHas('kelas', function($query){
+            $query->where('rombongan_belajar.semester_id', request()->semester_id);
+            $query->where('rombongan_belajar.sekolah_id', request()->sekolah_id);
+         },
+      )->whereHas('anggota_rombel.single_kenaikan_kelas', function($query){
+         $query->where('status', 3);
+      })->orderBy(request()->sortby, request()->sortbydesc)
+      ->when(request()->q, function($query){
+            $query->where('nama', 'ILIKE', '%' . request()->q . '%');
+            $query->where('nisn', 'ILIKE', '%' . request()->q . '%');
+      })
+     ->when(request()->rombongan_belajar_id, function($query){
+         $query->whereHas('kelas', function($query){
+            $query->where('rombongan_belajar.rombongan_belajar_id', request()->rombongan_belajar_id);
+         });
+      })->paginate(request()->per_page);
+      $rombongan_belajar = Rombongan_belajar::where(function($query){
+         $query->whereHas('anggota_rombel', function($query){
+            $query->whereHas('single_kenaikan_kelas', function($query){
+               $query->where('status', 3);
+            });
+         });
+         $query->where('semester_id', request()->semester_id);
+         $query->where('sekolah_id', request()->sekolah_id);
+      })->orderBy('nama')->get();
+     return response()->json(['status' => 'success', 'data' => $data, 'rombongan_belajar' => $rombongan_belajar]);
    }
 }

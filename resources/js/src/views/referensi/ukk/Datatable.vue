@@ -2,7 +2,7 @@
   <div>
     <b-row>
       <b-col md="4" class="mb-2">
-        <b-form-select v-model="meta.per_page" :options="[10, 25, 50, 100]" @change="loadPerPage"></b-form-select>
+        <v-select v-model="meta.per_page" :options="[10, 25, 50, 100]" @input="loadPerPage"></v-select>
       </b-col>
       <b-col md="4" offset-md="4">
         <b-form-input @input="search" placeholder="Cari data..."></b-form-input>
@@ -30,6 +30,7 @@
             <b-dropdown-item href="javascript:" @click="aksi(row.item, 'status')" v-if="row.item.status"><font-awesome-icon icon="fa-solid fa-xmark" /> Non Aktifkan</b-dropdown-item>
             <b-dropdown-item href="javascript:" @click="aksi(row.item, 'status')" v-else><font-awesome-icon icon="fa-solid fa-check" /> Aktifkan</b-dropdown-item>
             <b-dropdown-item href="javascript:" @click="aksi(row.item.paket_ukk_id, 'edit')"><font-awesome-icon icon="fa-solid fa-pencil" /> Ubah</b-dropdown-item>
+            <b-dropdown-item href="javascript:" @click="aksi(row.item.paket_ukk_id, 'hapus')" v-if="!row.item.rencana_ukk_count"><font-awesome-icon icon="fa-solid fa-trash" /> Hapus</b-dropdown-item>
           </b-dropdown>
         </template>
       </b-table>
@@ -47,13 +48,14 @@
 
 <script>
 import _ from 'lodash' //IMPORT LODASH, DIMANA AKAN DIGUNAKAN UNTUK MEMBUAT DELAY KETIKA KOLOM PENCARIAN DIISI
-import { BRow, BCol, BFormInput, BFormSelect, BTable, BSpinner, BPagination, BButton, BOverlay, BBadge, BDropdown, BDropdownItem } from 'bootstrap-vue'
-
+import { BRow, BCol, BFormInput, BTable, BSpinner, BPagination, BButton, BOverlay, BBadge, BDropdown, BDropdownItem } from 'bootstrap-vue'
+import vSelect from 'vue-select'
 export default {
   components: {
+    vSelect,
     BRow,
     BCol,
-    BFormInput, BFormSelect,
+    BFormInput,
     BTable,
     BSpinner,
     BPagination,

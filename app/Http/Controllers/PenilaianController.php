@@ -34,6 +34,9 @@ use Maatwebsite\Excel\Facades\Excel;
 use Rap2hpoutre\FastExcel\FastExcel;
 use App\Imports\NilaiAkhirImport;
 use App\Imports\NilaiSumatifImport;
+use App\Imports\NilaiPtsImport;
+use App\Imports\NilaiSumatifLingkupMateri;
+use App\Imports\NilaiSumatifAkhirSemester;
 use Carbon\Carbon;
 use Storage;
 
@@ -52,6 +55,7 @@ class PenilaianController extends Controller
             }
             $query->whereNotNull('kelompok_id');
             $query->whereNotNull('no_urut');
+            $query->where('mata_pelajaran_id', '<>', '800001000');
             //$query->whereNull('induk_pembelajaran_id');
             $query->orWhere('guru_pengajar_id', request()->guru_id);
             if(request()->rombongan_belajar_id){
@@ -59,6 +63,7 @@ class PenilaianController extends Controller
             }
             $query->whereNotNull('kelompok_id');
             $query->whereNotNull('no_urut');
+            $query->where('mata_pelajaran_id', '<>', '800001000');
             //$query->whereNull('induk_pembelajaran_id');
         };
     }
@@ -69,14 +74,14 @@ class PenilaianController extends Controller
             $query->where('sekolah_id', request()->sekolah_id);
             $query->where('jenis_rombel', request()->jenis_rombel);
             $query->whereHas('pembelajaran', $this->kondisiPembelajaran());
-        })->get();
+        })->orderBy('nama')->get();
         return response()->json(['status' => 'success', 'data' => $data]);
     }
     public function get_mapel(){
         $rombel = Rombongan_belajar::find(request()->rombongan_belajar_id);
-        $merdeka = (Str::contains($rombel->kurikulum->nama_kurikulum, 'Merdeka')) ? TRUE : FALSE;
+        $merdeka = (merdeka($rombel->kurikulum->nama_kurikulum)) ? TRUE : FALSE;
         $data = Pembelajaran::where($this->kondisiPembelajaran())->orderBy('mata_pelajaran_id', 'asc')->get();
-        return response()->json(['status' => 'success', 'data' => $data, 'merdeka' => $merdeka]);
+        return response()->json(['status' => 'success', 'data' => $data, 'merdeka' => $merdeka, 'rombel' => $rombel]);
     }
     private function wherehas($query){
         if(request()->merdeka){
@@ -98,6 +103,7 @@ class PenilaianController extends Controller
         }
     }
     public function get_nilai_akhir(){
+        /*
         $callback = function($query){
             $query->where('rombongan_belajar_id', request()->rombongan_belajar_id);
             $query->with([
@@ -129,44 +135,98 @@ class PenilaianController extends Controller
                 $query->where('pembelajaran_id', request()->pembelajaran_id);
             }], 'nilai');
         };
-        $get_mapel_agama = filter_agama_siswa(request()->pembelajaran_id, request()->rombongan_belajar_id);
         $get_siswa = Peserta_didik::where(function($query) use ($get_mapel_agama, $callback){
             $query->whereHas('anggota_rombel', $callback);
             if($get_mapel_agama){
                 $query->where('agama_id', $get_mapel_agama);
             }
         })->with(['anggota_rombel' => $callback])->orderBy('nama')->get();
+        */
+        $get_mapel_agama = filter_agama_siswa(request()->pembelajaran_id, request()->rombongan_belajar_id);
         $pembelajaran = Pembelajaran::find(request()->pembelajaran_id);
+        $kompetensi_id = (request()->merdeka) ? 4 : 1;
+        if(request()->mata_pelajaran_id !='800001000'){
+            $sub_mapel = Pembelajaran::where(function($query){
+                $query->where('induk_pembelajaran_id', request()->pembelajaran_id);
+                $query->whereNotNull('kelompok_id');
+                $query->whereNotNull('no_urut');
+            })->get();
+            if($sub_mapel->count()){
+                $kompetensi_id = 99;
+            }
+        }
+        $get_siswa = Peserta_didik::where(function($query) use ($get_mapel_agama){
+            if($get_mapel_agama){
+                $query->where('agama_id', $get_mapel_agama);
+            }
+        })->withWhereHas('anggota_rombel', function($query) use ($kompetensi_id){
+            $query->where('rombongan_belajar_id', request()->rombongan_belajar_id);
+            $query->with([
+                'capaian_kompeten' => function($query){
+                    $this->wherehas($query);
+                },
+                'tp_kompeten' => function($query){
+                    $this->wherehas($query);
+                },
+                'tp_inkompeten' => function($query){
+                    $this->wherehas($query);
+                },
+                'nilai_tp' => function($query){
+                    $query->where('pembelajaran_id', request()->pembelajaran_id);
+                },
+                'nilai_sumatif_semester' => function($query){
+                    $query->where('pembelajaran_id', request()->pembelajaran_id);
+                },
+                'nilai_akhir_mapel' => function($query) use ($kompetensi_id){
+                    $query->where('kompetensi_id', $kompetensi_id);
+                    $query->where('pembelajaran_id', request()->pembelajaran_id);
+                },
+                'nilai_akhir_kurmer' => function($query){
+                    $query->where('kompetensi_id', 4);
+                    $query->where('pembelajaran_id', request()->pembelajaran_id);
+                },
+                'nilai_akhir_induk' => function($query){
+                    $query->where('kompetensi_id', 99);
+                    $query->where('pembelajaran_id', request()->pembelajaran_id);
+                },
+            ]);
+            $query->withAvg(['nilai_tp' => function($query){
+                $query->where('pembelajaran_id', request()->pembelajaran_id);
+            }], 'nilai');
+        })->orderBy('nama')->get();
         $bobot_sumatif_materi = $pembelajaran->bobot_sumatif_materi;
         $bobot_sumatif_akhir = $pembelajaran->bobot_sumatif_akhir;
         $total_bobot = $bobot_sumatif_materi + $bobot_sumatif_akhir;
         $data_siswa = [];
-        //bobot * rata2_sumatif_materi / total_bobot
-        //bobot * rata2_sumatif_semester / total_bobot
-        //=IFERROR(ROUND(($H$42*H43/$L$42)+($K$42*K43/$L$42);0);"")
         foreach($get_siswa as $siswa){
-            //$nilai_sumatif_materi = $bobot_sumatif_materi * number_format($siswa->anggota_rombel->nilai_tp_avg_nilai,0) / $total_bobot;
-            //$nilai_sumatif_semester = ($siswa->anggota_rombel->nilai_sumatif_semester) ? $bobot_sumatif_akhir * number_format($siswa->anggota_rombel->nilai_sumatif_semester->nilai) / $total_bobot : 0;
             $nilai_sumatif_materi = number_format($siswa->anggota_rombel->nilai_tp_avg_nilai, 2);
             $nilai_sumatif_semester = ($siswa->anggota_rombel->nilai_sumatif_semester) ? number_format($siswa->anggota_rombel->nilai_sumatif_semester->nilai, 2) : 0;
             $nilai_akhir = collect([$nilai_sumatif_materi, $nilai_sumatif_semester]);
-            //=IFERROR(ROUND(($H$42*H43/$L$42)+($K$42*K43/$L$42);0);"")
             $nilai_asesmen = NULL;
             if($nilai_akhir->avg()){
                 $nilai_asesmen = number_format(($bobot_sumatif_materi * $nilai_sumatif_materi / $total_bobot) + ($bobot_sumatif_akhir * $nilai_sumatif_semester / $total_bobot) , 0);
             }
+            $nilai_akhir_jadi = NULL;
+            if($siswa->anggota_rombel->nilai_akhir_mapel){
+                $nilai_akhir_jadi = $siswa->anggota_rombel->nilai_akhir_mapel->nilai;
+            } elseif($siswa->anggota_rombel->nilai_akhir_kurmer){
+                $nilai_akhir_jadi = $siswa->anggota_rombel->nilai_akhir_kurmer->nilai;
+            } elseif($siswa->anggota_rombel->nilai_akhir_induk){
+                $nilai_akhir_jadi = $siswa->anggota_rombel->nilai_akhir_induk->nilai;
+            }
             $data_siswa[] = [
                 'nama' => $siswa->nama,
                 'anggota_rombel_id' => $siswa->anggota_rombel->anggota_rombel_id,
-                'nilai_akhir' => ($siswa->anggota_rombel->nilai_akhir_mapel) ? $siswa->anggota_rombel->nilai_akhir_mapel->nilai : NULL,
-                //'nilai_asesmen' => ($nilai_akhir->avg()) ? number_format($nilai_akhir->avg(),0) : NULL,
+                'pembelajaran_id' => request()->pembelajaran_id,
+                'kompetensi_id' => $kompetensi_id,
+                'nilai_akhir' => $nilai_akhir_jadi,
+                //'nilai_akhir' => ($siswa->anggota_rombel->nilai_akhir_mapel) ? $siswa->anggota_rombel->nilai_akhir_mapel->nilai : NULL,
+                'nilai_akhir_kurmer' => ($siswa->anggota_rombel->nilai_akhir_kurmer) ? $siswa->anggota_rombel->nilai_akhir_kurmer->nilai : NULL,
+                'nilai_akhir_induk' => ($siswa->anggota_rombel->nilai_akhir_induk) ? $siswa->anggota_rombel->nilai_akhir_induk->nilai : NULL,
                 'nilai_asesmen' => $nilai_asesmen,
-                //'nilai_sumatif_materi' => number_format($siswa->anggota_rombel->nilai_tp_avg_nilai,0),
-                //'nilai_sumatif_semester' => ($siswa->anggota_rombel->nilai_sumatif_semester) ? number_format($siswa->anggota_rombel->nilai_sumatif_semester->nilai) : 0,
                 'tp_kompeten' => $siswa->anggota_rombel->tp_kompeten,
                 'tp_inkompeten' => $siswa->anggota_rombel->tp_inkompeten,
                 'capaian_kompeten' => $siswa->anggota_rombel->capaian_kompeten,
-                //'anggota_rombel' => $siswa->anggota_rombel,
             ];
         }
         $data = [
@@ -176,7 +236,7 @@ class PenilaianController extends Controller
                 $query->whereHas('tp_mapel', function($query){
                     $query->where('tp_mapel.pembelajaran_id', request()->pembelajaran_id);
                 });
-                /*if(request()->merdeka){
+                if(request()->merdeka){
                     $query->whereHas('cp', function($query){
                         $query->where('mata_pelajaran_id', request()->mata_pelajaran_id);
                     });
@@ -184,7 +244,7 @@ class PenilaianController extends Controller
                     $query->whereHas('kd', function($query){
                         $query->where('mata_pelajaran_id', request()->mata_pelajaran_id);
                     });
-                }*/
+                }
             })->orderBy('created_at')->get(),
             'pembelajaran' => $pembelajaran,
         ];
@@ -219,9 +279,35 @@ class PenilaianController extends Controller
             ]
         );
         $insert = 0;
+        $kompetensi_id = (request()->merdeka) ? 4 : 1;
+        if(request()->mata_pelajaran_id !='800001000'){
+            $sub_mapel = Pembelajaran::where(function($query){
+                $query->where('induk_pembelajaran_id', request()->pembelajaran_id);
+                $query->whereNotNull('kelompok_id');
+                $query->whereNotNull('no_urut');
+            })->get();
+            if($sub_mapel->count()){
+                $kompetensi_id = 99;
+            }
+        }
         foreach(request()->nilai as $anggota_rombel_id => $nilai_akhir){
             $insert++;
-            if($nilai_akhir && $nilai_akhir > -1){
+            if($nilai_akhir >= 0 && $nilai_akhir <= 100){
+                Nilai_akhir::updateOrCreate(
+                    [
+                        'sekolah_id' => request()->sekolah_id,
+                        'anggota_rombel_id' => $anggota_rombel_id,
+                        'pembelajaran_id' => request()->pembelajaran_id,
+                        'kompetensi_id' => $kompetensi_id,
+                    ],
+                    [
+                        'nilai' => ($nilai_akhir) ? number_format($nilai_akhir,0) : 0,
+                    ]
+                );
+            } else {
+                Nilai_akhir::where('anggota_rombel_id', $anggota_rombel_id)->where('pembelajaran_id', request()->pembelajaran_id)->where('kompetensi_id', $kompetensi_id)->delete();
+            }
+            /*if($nilai_akhir && $nilai_akhir > -1){
                 Nilai_akhir::updateOrCreate(
                     [
                         'sekolah_id' => request()->sekolah_id,
@@ -236,15 +322,16 @@ class PenilaianController extends Controller
             } else {
                 $kompetensi_id = (request()->merdeka) ? 4 : 1;
                 Nilai_akhir::where('anggota_rombel_id', $anggota_rombel_id)->where('pembelajaran_id', request()->pembelajaran_id)->where('kompetensi_id', $kompetensi_id)->delete();
-            }
+            }*/
         }
-        $segments = [];
         $first = [];
         $last = [];
         foreach(request()->kompeten as $uuid => $kompeten){
             $segments = Str::of($uuid)->split('/[\s#]+/');
             $anggota_rombel_id = $segments->first();
             $tp_id = $segments->last();
+            $first[] = $anggota_rombel_id;
+            $last[] = $tp_id;
             $tp = Tujuan_pembelajaran::find($tp_id);
             if($tp){
                 if(request()->merdeka){
@@ -269,6 +356,8 @@ class PenilaianController extends Controller
                 } else {
                     Tp_nilai::where('anggota_rombel_id', $anggota_rombel_id)->where('tp_id', $tp_id)->delete();
                 }
+            } else {
+
             }
         }
         if($insert){
@@ -276,7 +365,6 @@ class PenilaianController extends Controller
                 'icon' => 'success',
                 'title' => 'Berhasil!',
                 'text' => 'Nilai Akhir berhasil disimpan',
-                'segments' => $segments,
                 'first' => $first,
                 'last' => $last,
             ];
@@ -331,6 +419,26 @@ class PenilaianController extends Controller
         }
         return response()->json($data);
     }
+    public function upload_nilai_pts(){
+        request()->validate(
+            [
+                'file_excel' => 'mimes:xlsx', // 1MB Max
+            ],
+            [
+                'file_excel.mimes' => 'File harus berupa file dengan ekstensi: xlsx.',
+            ]
+        );
+        $file_path = request()->file_excel->store('files', 'public');
+        $pembelajaran = Pembelajaran::find(request()->pembelajaran_id);
+        Excel::import(new NilaiPtsImport($pembelajaran), storage_path('/app/public/'.$file_path));
+        Storage::disk('public')->delete($file_path);
+        $data = [
+            'icon' => 'success',
+            'title' => 'Berhasil!',
+            'text' => 'Nilai Tengah Tengah berhasil disimpan',
+        ];
+        return response()->json($data);
+    }
     public function upload_nilai(){
         request()->validate(
             [
@@ -343,22 +451,63 @@ class PenilaianController extends Controller
         $list = [];
         $collection = [];
         $file_path = request()->template_excel->store('files', 'public');
-        if(request()->opsi == 'sumatif-lingkup-materi' || request()->opsi == 'sumatif-akhir-semester'){
-            $collection = (new FastExcel)->import(storage_path('/app/public/'.$file_path));
-            foreach($collection as $items){
-                $siswa = [];
-                foreach($items as $key => $item){
-                    if($key != 'NO' || $key != 'PD_ID' || $key != 'NAMA'){
-                        $tp = Tujuan_pembelajaran::where(DB::raw('TRIM(deskripsi)'), trim($key))->first();
-                        $key = ($tp) ? $tp->tp_id : $key;    
+        if(request()->opsi == 'sumatif-lingkup-materi'){
+            $data_tp = Tujuan_pembelajaran::where(function($query){
+                $query->whereHas('tp_mapel', function($query){
+                    $query->where('tp_mapel.pembelajaran_id', request()->pembelajaran_id);
+                });
+            })->orderBy('created_at')->get();
+            $list = [];
+            $collection = (new NilaiSumatifLingkupMateri())->toCollection(storage_path('/app/public/'.$file_path));
+            
+            foreach($collection as $rows){
+                foreach ($rows as $row) {
+                    $nilai = [];
+                    foreach($data_tp as $index => $tp){
+                        $nilai[] = [
+                            'angka' => $row['TP '.($index + 1)],
+                            'tp' => $row[$tp->tp_id],
+                        ];
                     }
-                    $siswa[$key] = $item;
-                    unset($siswa['NO'], $siswa['NAMA']);
+                    $list[] = [
+                        'anggota_rombel_id' => $row['PD_ID'],
+                        'nilai' => $nilai,
+                    ];
                 }
-                $list[] = $siswa;
-            }    
+            }
+        } elseif(request()->opsi == 'sumatif-akhir-semester'){
+            $list = [];
+            $collection = (new NilaiSumatifAkhirSemester())->toCollection(storage_path('/app/public/'.$file_path));
+            
+            foreach($collection as $rows){
+                foreach ($rows as $row) {
+                    $list[] = [
+                        'anggota_rombel_id' => $row['PD_ID'],
+                        'NILAI_NON_TES' => $row['NILAI_NON_TES'],
+                        'NILAI_TES' => $row['NILAI_TES'],
+                    ];
+                }
+            }
         } else {
-            Excel::import(new NilaiAkhirImport(request()->rombongan_belajar_id, request()->pembelajaran_id, request()->sekolah_id, request()->merdeka), storage_path('/app/public/'.$file_path));
+            //Excel::import(new NilaiAkhirImport(request()->rombongan_belajar_id, request()->pembelajaran_id, request()->sekolah_id, request()->merdeka), storage_path('/app/public/'.$file_path));
+            $collection = (new NilaiAkhirImport(request()->rombongan_belajar_id, request()->pembelajaran_id, request()->sekolah_id, request()->merdeka))->toCollection(storage_path('/app/public/'.$file_path));
+            if($collection->count() == 1){
+                $this->simpan_nilai_import($collection->first());
+                $data = [
+                    'success' => TRUE,
+                    'icon' => 'success',
+                    'title' => 'Berhasil!',
+                    'text' => 'Nilai Akhir berhasil disimpan',
+                ];
+            } else {
+                $data = [
+                    'success' => FALSE,
+                    'icon' => 'error',
+                    'title' => 'Gagal!',
+                    'text' => 'Format Import salah. Silahkan Unduh Template ulang!',
+                ];
+            }
+            return response()->json($data);
         }
         Storage::disk('public')->delete($file_path);
         
@@ -370,6 +519,59 @@ class PenilaianController extends Controller
             'data_nilai' => $list,
         ];
         return response()->json($data);
+    }
+    private function simpan_nilai_import($rows){
+        if(is_bool(request()->merdeka)){
+            $merdeka = request()->merdeka;
+        } else {
+            $merdeka = (request()->merdeka == 'true') ? TRUE : FALSE;
+        }
+        foreach ($rows as $row)
+        {
+            if($row[0]){
+                if(is_numeric($row[4])) {
+                    $a = Nilai_akhir::updateOrCreate(
+                        [
+                            'sekolah_id' => request()->sekolah_id,
+                            'anggota_rombel_id' => $row[1],
+                            'pembelajaran_id' => request()->pembelajaran_id,
+                            'kompetensi_id' => ($merdeka) ? 4 : 1,
+                        ],
+                        [
+                            'nilai' => ($row[4] >= 0 && $row[4] <= 100) ? number_format($row[4], 0) : 0,
+                        ]
+                    );
+                }
+                $this->insertTpNilai($row, $merdeka);
+            } else {
+                $this->insertTpNilai($row, $merdeka);
+            }
+        }
+    }
+    private function insertTpNilai($row, $merdeka){
+        $tp = Tujuan_pembelajaran::find($row[5]);
+        if ($merdeka) {
+            $update = [
+                'cp_id' => $tp->cp_id,
+            ];
+        } else {
+            $update = [
+                'kd_id' => $tp->kd_id,
+            ];
+        }
+        if(!is_null($row[6])){
+            Tp_nilai::updateOrCreate(
+                [
+                    'sekolah_id' => request()->sekolah_id,
+                    'anggota_rombel_id' => $row[1],
+                    'tp_id' => $row[5],
+                    'kompeten' => $row[6],
+                ],
+                $update
+            );
+        } else {
+            Tp_nilai::where('anggota_rombel_id', $row[1])->where('tp_id', $row[5])->delete();
+        }
     }
     public function get_capaian_kompetensi(){
         $callback = function($query){
@@ -396,14 +598,18 @@ class PenilaianController extends Controller
                 },
             ]);
         };
-        $get_mapel_agama = filter_agama_siswa(request()->pembelajaran_id, request()->rombongan_belajar_id);
-        $data = [
-            'data_siswa' => Peserta_didik::where(function($query) use ($get_mapel_agama, $callback){
+        $data_siswa = [];
+        if(request()->pembelajaran_id){
+            $get_mapel_agama = filter_agama_siswa(request()->pembelajaran_id, request()->rombongan_belajar_id);
+            $data_siswa = Peserta_didik::where(function($query) use ($get_mapel_agama, $callback){
                 $query->whereHas('anggota_rombel', $callback);
                 if($get_mapel_agama){
                     $query->where('agama_id', $get_mapel_agama);
                 }
-            })->with(['anggota_rombel' => $callback])->orderBy('nama')->get(),
+            })->with(['anggota_rombel' => $callback])->orderBy('nama')->get();
+        }
+        $data = [
+            'data_siswa' => $data_siswa,
             'show_reset' => Deskripsi_mata_pelajaran::where('pembelajaran_id', request()->pembelajaran_id)->count(),
         ];
         return response()->json(['status' => 'success', 'data' => $data]);
@@ -484,62 +690,157 @@ class PenilaianController extends Controller
                 });
             });
         })->paginate(request()->per_page);
-        return response()->json(['status' => 'success', 'data' => $data, 'search' => request()->q]);
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+            'search' => request()->q,
+            'kurtilas' => Rombongan_belajar::where(function($query){
+                $query->whereHas('kurikulum', function($query){
+                    $query->where('nama_kurikulum', 'ILIKE', '%2013%');
+                });
+                $query->where('semester_id', request()->semester_id);
+                $query->where('sekolah_id', request()->sekolah_id);
+            })->first(),
+        ]);
     }
     public function ref_sikap(){
-        $data = Budaya_kerja::with(['elemen_budaya_kerja'])->get();
-        return response()->json(['status' => 'success', 'data' => $data]);
+        $data = [
+            'status' => 'success',
+            'data' => Budaya_kerja::with(['elemen_budaya_kerja'])->get(),
+            'kurtilas' => Rombongan_belajar::where(function($query){
+                $query->whereHas('kurikulum', function($query){
+                    $query->where('nama_kurikulum', 'ILIKE', '%2013%');
+                });
+                $query->where('semester_id', request()->semester_id);
+                $query->where('sekolah_id', request()->sekolah_id);
+            })->first(),
+            'nilai_budaya_kerja' => Nilai_budaya_kerja::with(['anggota_rombel' => function($query){
+                $query->with(['rombongan_belajar', 'peserta_didik']);
+            }])->find(request()->nilai_budaya_kerja_id),
+        ];
+        return response()->json($data);
     }
     public function get_elemen(){
         $data = Elemen_budaya_kerja::where('budaya_kerja_id', request()->budaya_kerja_id)->get()->unique('elemen');
         return response()->json(['data' => $data->values()->all()]);
     }
     public function simpan_nilai_sikap(){
-        request()->validate(
-            [
-                'tingkat' => 'required',
-                'rombongan_belajar_id' => 'required',
-                'anggota_rombel_id' => 'required',
-                'tanggal' => 'required',
-                'budaya_kerja_id' => 'required',
-                'elemen_id' => 'required',
-                'opsi_sikap' => 'required',
-                'uraian_sikap' => 'required',
-            ],
-            [
-                'tingkat.required' => 'Tingkat Kelas tidak boleh kosong!',
-                'rombongan_belajar_id.required' => 'Rombongan Belajar tidak boleh kosong!',
-                'anggota_rombel_id.required' => 'Peserta Didik tidak boleh kosong!',
-                'tanggal.required' => 'Tanggal tidak boleh kosong!',
-                'budaya_kerja_id.required' => 'Dimensi Sikap tidak boleh kosong!',
-                'elemen_id.required' => 'Elemen Sikap tidak boleh kosong!',
-                'opsi_sikap.required' => 'Opsi Sikap tidak boleh kosong!',
-                'uraian_sikap.required' => 'Uraian Sikap tidak boleh kosong!',
-            ]
-        );
-        Nilai_budaya_kerja::create([
-            'sekolah_id'		=> request()->sekolah_id,
-            'guru_id' => request()->guru_id,
-            'anggota_rombel_id'	=> request()->anggota_rombel_id,
-            'tanggal' 	=> request()->tanggal,
-            'budaya_kerja_id'	=> request()->budaya_kerja_id,
-            'elemen_id' => request()->elemen_id,
-            'opsi_id'		=> request()->opsi_sikap,
-            'deskripsi'		=> request()->uraian_sikap,
-            'last_sync'			=> now(),
-        ]);
-        $insert = 1;
-        if($insert){
-            $data = [
-                'icon' => 'success',
-                'title' => 'Berhasil!',
-                'text' => 'Catatan Sikap berhasil disimpan',
-            ];
+        if(request()->nilai_budaya_kerja_id){
+            request()->validate(
+                [
+                    'tanggal' => 'required',
+                    'budaya_kerja_id' => 'required',
+                    'elemen_id' => 'required',
+                    'opsi_sikap' => 'required',
+                    'uraian_sikap' => 'required',
+                ],
+                [
+                    'tanggal.required' => 'Tanggal tidak boleh kosong!',
+                    'budaya_kerja_id.required' => 'Dimensi Sikap tidak boleh kosong!',
+                    'elemen_id.required' => 'Elemen Sikap tidak boleh kosong!',
+                    'opsi_sikap.required' => 'Opsi Sikap tidak boleh kosong!',
+                    'uraian_sikap.required' => 'Uraian Sikap tidak boleh kosong!',
+                ]
+            );
+            $find = Nilai_budaya_kerja::find(request()->nilai_budaya_kerja_id);
+            if($find){
+                $find->tanggal = request()->tanggal;
+                $find->budaya_kerja_id = request()->budaya_kerja_id;
+                $find->elemen_id = request()->elemen_id;
+                $find->opsi_id = request()->opsi_sikap;
+                $find->deskripsi = request()->uraian_sikap;
+                if($find->save()){
+                    $data = [
+                        'icon' => 'success',
+                        'title' => 'Berhasil!',
+                        'text' => 'Catatan Sikap berhasil diperbaharui',
+                    ];
+                } else {
+                    $data = [
+                        'icon' => 'error',
+                        'title' => 'Berhasil!',
+                        'text' => 'Catatan Sikap gagal diperbaharui. Silahkan coba beberapa saat lagi!',
+                    ];
+                }
+            } else {
+                $data = [
+                    'icon' => 'error',
+                    'title' => 'Berhasil!',
+                    'text' => 'Catatan Sikap tidak ditemukan!',
+                ];
+            }
+        } else {
+            request()->validate(
+                [
+                    'tingkat' => 'required',
+                    'rombongan_belajar_id' => 'required',
+                    'anggota_rombel_id' => 'required',
+                    'tanggal' => 'required',
+                    'budaya_kerja_id' => 'required',
+                    'elemen_id' => 'required',
+                    'opsi_sikap' => 'required',
+                    'uraian_sikap' => 'required',
+                ],
+                [
+                    'tingkat.required' => 'Tingkat Kelas tidak boleh kosong!',
+                    'rombongan_belajar_id.required' => 'Rombongan Belajar tidak boleh kosong!',
+                    'anggota_rombel_id.required' => 'Peserta Didik tidak boleh kosong!',
+                    'tanggal.required' => 'Tanggal tidak boleh kosong!',
+                    'budaya_kerja_id.required' => 'Dimensi Sikap tidak boleh kosong!',
+                    'elemen_id.required' => 'Elemen Sikap tidak boleh kosong!',
+                    'opsi_sikap.required' => 'Opsi Sikap tidak boleh kosong!',
+                    'uraian_sikap.required' => 'Uraian Sikap tidak boleh kosong!',
+                ]
+            );
+            Nilai_budaya_kerja::create([
+                'sekolah_id'		=> request()->sekolah_id,
+                'guru_id' => request()->guru_id,
+                'anggota_rombel_id'	=> request()->anggota_rombel_id,
+                'tanggal' 	=> request()->tanggal,
+                'budaya_kerja_id'	=> request()->budaya_kerja_id,
+                'elemen_id' => request()->elemen_id,
+                'opsi_id'		=> request()->opsi_sikap,
+                'deskripsi'		=> request()->uraian_sikap,
+                'last_sync'			=> now(),
+            ]);
+            $insert = 1;
+            if($insert){
+                $data = [
+                    'icon' => 'success',
+                    'title' => 'Berhasil!',
+                    'text' => 'Catatan Sikap berhasil disimpan',
+                ];
+            } else {
+                $data = [
+                    'icon' => 'error',
+                    'title' => 'Gagal!',
+                    'text' => 'Catatan Sikap gagal disimpan. Silahkan coba beberapa saat lagi!',
+                ];
+            }
+        }
+        return response()->json($data);
+    }
+    public function hapus_nilai_sikap(){
+        $find = Nilai_budaya_kerja::find(request()->id);
+        if($find){
+            if($find->delete()){
+                $data = [
+                    'icon' => 'success',
+                    'title' => 'Berhasil!',
+                    'text' => 'Catatan Sikap berhasil dihapus',
+                ];
+            } else {
+                $data = [
+                    'icon' => 'error',
+                    'title' => 'Berhasil!',
+                    'text' => 'Catatan Sikap gagal dihapus. Silahkan coba beberapa saat lagi!',
+                ];
+            }
         } else {
             $data = [
                 'icon' => 'error',
-                'title' => 'Gagal!',
-                'text' => 'Catatan Sikap gagal disimpan. Silahkan coba beberapa saat lagi!',
+                'title' => 'Berhasil!',
+                'text' => 'Catatan Sikap tidak ditemukan!',
             ];
         }
         return response()->json($data);
@@ -1029,4 +1330,47 @@ class PenilaianController extends Controller
         }
         return response()->json($data);
     }
+    public function all_pembelajaran(){
+        $data = [
+            'data' => Pembelajaran::where($this->kondisi())->withCount([
+                'anggota_rombel',
+                'nilai_pts',
+              ])->with('rombongan_belajar')->orderBy('mata_pelajaran_id')->get(),
+        ];
+        return response()->json($data);
+    }
+    private function kondisi(){
+        return function($query){
+            $query->where('semester_id', request()->semester_id);
+            $query->where('sekolah_id', request()->sekolah_id);
+            $query->where('guru_id', request()->guru_id);
+            $query->whereNotNull('kelompok_id');
+            $query->whereNotNull('no_urut');
+            //$query->whereNull('induk_pembelajaran_id');
+            $query->orWhere('guru_pengajar_id', request()->guru_id);
+            $query->where('semester_id', request()->semester_id);
+            $query->where('sekolah_id', request()->sekolah_id);
+            $query->whereNotNull('kelompok_id');
+            $query->whereNotNull('no_urut');
+            //$query->whereNull('induk_pembelajaran_id');
+        };
+     }
+     public function detil_nilai_pts(){
+        $data = [
+            'pembelajaran' => Pembelajaran::with('rombongan_belajar')->find(request()->pembelajaran_id),
+            'items' => Peserta_didik::withWhereHas('anggota_rombel', function($query){
+                $query->whereHas('rombongan_belajar', function($query){
+                    $query->whereHas('pembelajaran', function($query){
+                        $query->where('pembelajaran_id', request()->pembelajaran_id);
+                    });
+                });
+                $query->with(['nilai_pts' => function($query){
+                    $query->whereHas('rapor_pts', function($query){
+                        $query->where('pembelajaran_id', request()->pembelajaran_id);
+                    });
+                }]);
+            })->orderBy('nama')->get(),
+        ];
+        return response()->json($data);
+     }
 }

@@ -13,6 +13,7 @@
               <b-th class="text-center">NISN</b-th>
               <b-th class="text-center">Halaman Depan</b-th>
               <b-th class="text-center">Rapor Akademik</b-th>
+              <b-th class="text-center" v-if="rapor_pts">Rapor Tengah Semester</b-th>
               <b-th class="text-center" v-if="merdeka">Rapor P5</b-th>
               <b-th class="text-center">Dokumen Pendukung</b-th>
             </b-tr>
@@ -25,8 +26,18 @@
                 <b-td class="text-center">
                   <b-button variant="success" :href="`/cetak/rapor-cover/${item.anggota_rombel.anggota_rombel_id}`" target="_blank"><font-awesome-icon icon="fa-solid fa-file" size="2xl" /></b-button>
                 </b-td>
-                <b-td class="text-center">
-                  <b-button variant="warning" :href="`/cetak/rapor-nilai-akhir/${item.anggota_rombel.anggota_rombel_id}/${form.sekolah_id}/${form.semester_id}`" target="_blank"><font-awesome-icon icon="fa-solid fa-file-pdf" size="2xl" /></b-button>
+                <template v-if="merdeka || is_ppa">
+                  <b-td class="text-center">
+                    <b-button variant="warning" :href="`/cetak/rapor-nilai-akhir/${item.anggota_rombel.anggota_rombel_id}/${form.sekolah_id}/${form.semester_id}`" target="_blank"><font-awesome-icon icon="fa-solid fa-file-pdf" size="2xl" /></b-button>
+                  </b-td>
+                </template>
+                <template v-else>
+                  <b-td class="text-center">
+                    <b-button variant="warning" :href="`/cetak/rapor-semester/${item.anggota_rombel.anggota_rombel_id}/${form.sekolah_id}/${form.semester_id}`" target="_blank"><font-awesome-icon icon="fa-solid fa-file-pdf" size="2xl" /></b-button>
+                  </b-td>
+                </template>
+                <b-td class="text-center" v-if="rapor_pts">
+                  <b-button variant="primary" :href="`/cetak/rapor-tengah-semester/${item.anggota_rombel.anggota_rombel_id}/${form.semester_id}`" target="_blank"><font-awesome-icon icon="fa-solid fa-file-pdf" size="2xl" /></b-button>
                 </b-td>
                 <b-td class="text-center" v-if="merdeka">
                   <b-button variant="info" :href="`/cetak/rapor-p5/${item.anggota_rombel.anggota_rombel_id}/${form.semester_id}`" target="_blank"><font-awesome-icon icon="fa-solid fa-file-pdf" size="2xl" /></b-button>
@@ -58,6 +69,7 @@ export default {
     return {
       isBusy: true,
       merdeka: false,
+      is_ppa: false,
       form: {
         aksi: 'cetak-rapor',
         user_id: '',
@@ -67,6 +79,7 @@ export default {
         periode_aktif: '',
       },
       data_siswa: [],
+      rapor_pts: false,
     }
   },
   created() {
@@ -84,6 +97,8 @@ export default {
         let getData = response.data
         this.data_siswa = getData.data_siswa
         this.merdeka = getData.merdeka
+        this.is_ppa = getData.is_ppa
+        this.rapor_pts = getData.rapor_pts
       })
     },
   },

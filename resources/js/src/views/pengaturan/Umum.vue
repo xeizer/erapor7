@@ -19,6 +19,9 @@
                         </template>
                       </v-select>
                     </b-form-group>
+                    <b-form-group label="Tanggal Rapor Tengah Semester" label-for="tanggal_rapor_pts" v-if="rapor_pts">
+                      <b-form-datepicker v-model="form.tanggal_rapor_pts" show-decade-nav button-variant="outline-secondary" left locale="id" aria-controls="tanggal_rapor_pts" @context="onContext" placeholder="== Pilih Tanggal Rapor Tengah Semester ==" />
+                    </b-form-group>
                     <b-form-group label="Tanggal Rapor Semester" label-for="tanggal_rapor" :invalid-feedback="feedback.tanggal_rapor" :state="state.tanggal_rapor">
                       <b-form-datepicker v-model="form.tanggal_rapor" show-decade-nav button-variant="outline-secondary" left locale="id" aria-controls="tanggal_rapor" @context="onContext" placeholder="== Pilih Tanggal Rapor Semester ==" />
                     </b-form-group>
@@ -39,7 +42,7 @@
                         </template>
                       </v-select>
                     </b-form-group>
-                    <b-form-group label="Jabatan Kepala Sekolah" label-for="jabatan">
+                    <b-form-group label="Jabatan Kepala Sekolah" label-for="jabatan" :invalid-feedback="feedback.jabatan" :state="state.jabatan">
                       <v-select id="jabatan" v-model="form.jabatan" :options="jabatan" :reduce="text => text.value" label="text" placeholder="== Pilih Jabatan Kepala Sekolah ==" :clearable="true">
                         <template #no-options="{ search, searching, loading }">
                           Tidak ada data untuk ditampilkan
@@ -66,7 +69,7 @@
                 <b-row>
                   <b-col cols="12" class="text-center">
                     <p>Logo Sekolah</p>
-                    <b-img thumbnail fluid :src="`/storage/images/${logo_sekolah}`" alt="Logo Sekolah" class="mb-1" v-if="logo_sekolah"></b-img>
+                    <b-img thumbnail fluid :src="logo_sekolah" alt="Logo Sekolah" class="mb-1"></b-img>
                     <b-form-file v-model="form.file" placeholder="Choose a file or drop it here..." drop-placeholder="Drop file here..." @change="onFileChange" :state="state.file" />
                     <p v-show="feedback.file" class="text-danger">{{feedback.file}}</p>
                   </b-col>
@@ -108,6 +111,7 @@ export default {
       form: {
         semester_id: '',
         tanggal_rapor: '',
+        tanggal_rapor_pts: '',
         tanggal_rapor_kelas_akhir: '',
         zona: '',
         kepala_sekolah: '',
@@ -121,11 +125,13 @@ export default {
         tanggal_rapor: '',
         zona: '',
         file: '',
+        jabatan: '',
       },
       state: {
         tanggal_rapor: null,
         zona: null,
         file: null,
+        jabatan: null,
       },
       periode: null,
       data_zona: [
@@ -139,8 +145,10 @@ export default {
       jabatan: [
         { value: 'Kepala Sekolah', text: 'Kepala Sekolah' },
         { value: 'Plt. Kepala Sekolah', text: 'PLT Kepala Sekolah'},
+        { value: 'Plh. Kepala Sekolah', text: 'PLH Kepala Sekolah'},
       ],
-      logo_sekolah: null,
+      logo_sekolah: '/images/tutwuri.png',
+      rapor_pts: false,
     }
   },
   created() {
@@ -173,7 +181,13 @@ export default {
         this.data_guru = getData.data_guru
         this.data_rombel = getData.data_rombel
         this.semester = getData.semester
-        this.logo_sekolah = getData.logo_sekolah
+        if(getData.logo_sekolah){
+          this.logo_sekolah = getData.logo_sekolah
+        }
+        this.rapor_pts = getData.rapor_pts
+        if(this.rapor_pts){
+          this.form.tanggal_rapor_pts = getData.tanggal_rapor_pts
+        }
       })
     },
     onFileChange(e) {
@@ -186,7 +200,7 @@ export default {
       data.append('semester_id', this.form.semester_id);
       data.append('sekolah_id', this.user.sekolah_id);
       data.append('semester_aktif', this.user.semester.semester_id);
-      //data.append('tanggal_rapor_uts', (this.tanggal_rapor_uts) ? this.tanggal_rapor_uts : '')
+      data.append('tanggal_rapor_pts', (this.form.tanggal_rapor_pts) ? this.form.tanggal_rapor_pts : '')
       data.append('tanggal_rapor', (this.form.tanggal_rapor) ? this.form.tanggal_rapor : '')
       data.append('tanggal_rapor_kelas_akhir', (this.form.tanggal_rapor_kelas_akhir) ? this.form.tanggal_rapor_kelas_akhir : '')
       data.append('zona', (this.form.zona) ? this.form.zona : '')
@@ -206,9 +220,11 @@ export default {
           this.state.tanggal_rapor = (data.errors.tanggal_rapor) ? false : null
           this.state.zona = (data.errors.zona) ? false : null
           this.state.file = (data.errors.photo) ? false : null
+          this.state.jabatan = (data.errors.jabatan) ? false : null
           this.feedback.tanggal_rapor = (data.errors.tanggal_rapor) ? data.errors.tanggal_rapor.join(', ') : ''
           this.feedback.zona = (data.errors.zona) ? data.errors.zona.join(', ') : ''
           this.feedback.file = (data.errors.photo) ? data.errors.photo.join(', ') : ''
+          this.feedback.jabatan = (data.errors.jabatan) ? data.errors.jabatan.join(', ') : ''
         } else {
           this.$swal({
             icon: data.icon,

@@ -14,10 +14,15 @@ use App\Models\Rombongan_belajar;
 use App\Models\Ekstrakurikuler;
 use App\Models\Pembelajaran;
 use App\Models\Pekerjaan;
+use App\Models\Semester;
 use Validator;
 use Hash;
 class UsersController extends Controller
 {
+    public function __construct()
+    {
+        set_time_limit(0);
+    }
     public function index()
     {
         $team = Team::where('name', request()->periode_aktif)->first();
@@ -181,12 +186,70 @@ class UsersController extends Controller
     }
     private function generate_pd(){
         $insert = 0;
+        $role = Role::where('name', 'siswa')->first();
+        $adminRole = Role::where('name', 'admin')->first();
+        Peserta_didik::where(function($query){
+            $query->whereDoesntHave('pd_keluar', function($query){
+                $query->where('semester_id', request()->semester_id);
+            });
+            $query->where('sekolah_id', request()->sekolah_id);
+        })->orderBy('peserta_didik_id')->chunk(100, function ($data) use ($role, $adminRole, &$insert) {
+            foreach($data as $d){
+                $insert++;
+                $new_password = strtolower(Str::random(8));
+                $user = User::where('peserta_didik_id', $d->peserta_didik_id)->first();
+                if(!$user){
+                    $user_email = $this->check_email($d, 'peserta_didik_id');
+                    $user = User::create([
+                        'name' => $d->nama,
+						'email' => $user_email,
+						'nisn'	=> $d->nisn,
+						'password' => bcrypt($new_password),
+						'last_sync'	=> now(),
+						'sekolah_id'	=> request()->sekolah_id,
+						'password_dapo'	=> md5($new_password),
+						'peserta_didik_id'	=> $d->peserta_didik_id,
+						'default_password' => $new_password,
+                    ]);
+                } elseif(!$user->email){
+                    $user_email = $this->check_email($d, 'peserta_didik_id');
+                    $user->email = $user_email;
+                    $user->save();
+                }
+                if(!$d->email){
+                    $d->email = $user->email;
+                    $d->save();
+                }
+                $user->detachRole($adminRole, request()->periode_aktif);
+                if(!$user->hasRole($role, request()->periode_aktif)){
+                    $user->attachRole($role, request()->periode_aktif);
+                }
+            }
+        });
+        if($insert){
+            $data = [
+                'icon' => 'success',
+                'title' => 'Berhasil!',
+                'text' => 'Pengguna Peserta Didik berhasil diperbaharui',
+            ];
+        } else {
+            $data = [
+                'icon' => 'error',
+                'title' => 'Gagal!',
+                'text' => 'Pengguna Peserta Didik gagal diperbaharui. Silahkan coba beberapa saat lagi!',
+            ];
+        }
+        return $data;
+    }
+    private function generate_pdOld(){
+        $insert = 0;
         $data = Peserta_didik::where(function($query){
             $query->whereDoesntHave('pd_keluar', function($query){
                 $query->where('semester_id', request()->semester_id);
             });
             $query->where('sekolah_id', request()->sekolah_id);
         })->get();
+        
         $role = Role::where('name', 'siswa')->first();
         $adminRole = Role::where('name', 'admin')->first();
         if($data){
@@ -245,9 +308,17 @@ class UsersController extends Controller
         if($user->guru_id){
             $roles = Role::select('id as value', 'display_name as text')->whereIn('name', ['waka', 'kaprog', 'internal'])->orderBy('id')->get();
         }
+        /*
+        $sorted = $collection->sortBy(function ($product, $key) {
+            return count($product['colors']);
+        });
+        $sorted->values()->all();*/
+        $collection = collect($user_roles);
+        $sorted = $collection->sortBy('name', SORT_NATURAL);
         $data = [
             'user' => $user,
-            'roles' => $roles
+            'roles' => $roles,
+            'permission' => $sorted->values()->all(),
         ];
         return response()->json($data);
     }
@@ -329,7 +400,7 @@ class UsersController extends Controller
                     'avatar' => $user->profile_photo_path,
                     'nama' => $user->name,
                     'nisn' => "NISN: $user->nisn",
-                    'coverImg' => '/images/profile/timeline.jpg',
+                    'coverImg' => '/images/profile/timeline.png',
                 ],
                 'pekerjaan' => Pekerjaan::orderBy('pekerjaan_id')->get(),
                 'pd' => Peserta_didik::with(['pekerjaan_ayah', 'pekerjaan_ibu', 'agama', 'kelas' => function($query){
@@ -358,38 +429,15 @@ class UsersController extends Controller
                         },
                      ]);
                 }])->find($user->peserta_didik_id),
+                'semester' => Semester::whereHas('anggota_rombel', function($query){
+                    $query->whereHas('rombongan_belajar', function($query){
+                       $query->where('jenis_rombel', 1);
+                    });
+                    $query->whereHas('peserta_didik', function($query){
+                       $query->where('peserta_didik_id', request()->user()->peserta_didik_id);
+                    });
+                 })->orderBy('semester_id')->get(),
         ];
-        return response()->json($data);
-    }
-    public function nilai_semester(){
-        $data = Rombongan_belajar::where(function($query){
-            $query->where('semester_id', request()->semester_id);
-            $query->where('jenis_rombel', 1);
-            $query->whereHas('anggota_rombel', function($query){
-                $query->where('peserta_didik_id', request()->user()->peserta_didik_id);
-            });
-        })->with([
-            'kurikulum',
-            'wali_kelas' => function($query){
-               $query->select('guru_id', 'nama');
-            },
-            'pembelajaran' => function($query){
-                $query->whereNotNull('kelompok_id');
-                $query->whereNotNull('no_urut');
-                $query->orderBy('mata_pelajaran_id');
-                $query->with([
-                    'guru' => function($query){
-                        $query->select('guru_id', 'nama');
-                    }, 
-                    'pengajar' => function($query){
-                        $query->select('guru_id', 'nama');
-                    },
-                    'nilai_akhir_pengetahuan' => $this->callback(),
-                    'nilai_akhir_keterampilan' => $this->callback(),
-                    'nilai_akhir_kurmer' => $this->callback(),
-                ]);
-            },
-         ])->first();
         return response()->json($data);
     }
     public function update_profile(){
@@ -471,6 +519,52 @@ class UsersController extends Controller
             'title' => 'Berhasil!',
             'text' => 'Profil Pengguna berhasil diperbaharui',
         ];
+        return response()->json($data);
+    }
+    public function nilai_semester(){
+        $data = Rombongan_belajar::where(function($query){
+            $query->where('semester_id', request()->semester_id);
+            $query->where('jenis_rombel', 1);
+            $query->whereHas('anggota_rombel', function($query){
+                $query->where('peserta_didik_id', request()->user()->peserta_didik_id);
+            });
+        })->with([
+            'kurikulum',
+            'wali_kelas' => function($query){
+               $query->select('guru_id', 'nama');
+            },
+            'pembelajaran' => function($query){
+                $query->whereNotNull('kelompok_id');
+                $query->whereNotNull('no_urut');
+                $query->orderBy('mata_pelajaran_id');
+                $query->with([
+                    'guru' => function($query){
+                        $query->select('guru_id', 'nama');
+                    }, 
+                    'pengajar' => function($query){
+                        $query->select('guru_id', 'nama');
+                    },
+                    'nilai_akhir_pengetahuan' => $this->callback(),
+                    'nilai_akhir_keterampilan' => $this->callback(),
+                    'nilai_akhir_kurmer' => $this->callback(),
+                ]);
+            },
+         ])->first();
+        return response()->json($data);
+    }
+    public function teman_sekelas(){
+        $data = Peserta_didik::where(function($query){
+            $query->whereHas('anggota_rombel', function($query){
+                $query->where('semester_id', request()->semester_id);
+                $query->whereHas('rombongan_belajar', function($query){
+                    $query->where('jenis_rombel', 1);
+                    $query->whereHas('anggota_rombel', function($query){
+                        $query->where('peserta_didik_id', request()->user()->peserta_didik_id);
+                    });
+                });
+            });
+            $query->where('peserta_didik_id', '<>', request()->user()->peserta_didik_id);
+        })->orderBy('nama')->get();
         return response()->json($data);
     }
 }

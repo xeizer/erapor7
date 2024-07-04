@@ -23,6 +23,7 @@ axiosIns.interceptors.request.use(function (config) {
 axiosIns.interceptors.response.use(
   response => response,
   error => {
+    console.log(error.response.status);
     if (error.response.status === 401) {
       // ℹ️ Logout user and redirect to login page
       // Remove "userData" from localStorage
@@ -33,9 +34,21 @@ axiosIns.interceptors.response.use(
       localStorage.removeItem('userAbilities')
   
       // If 401 response returned from api
-      this.$router.push('/login')
-    }
-    else {
+      window.location.replace('/login')
+    } else if(error.response.status == 500){
+      let getData = error.response.data
+      Vue.swal({
+        icon: getData.icon,
+        title: getData.title,
+        text: getData.text,
+        customClass: {
+          confirmButton: 'btn btn-success',
+        },
+        allowOutsideClick: false,
+      }).then(function(){
+        window.location.replace('/')
+      })
+    } else {
       return error.response
       //return Promise.reject(error)
     }

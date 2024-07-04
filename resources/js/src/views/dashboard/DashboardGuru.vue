@@ -28,10 +28,16 @@
                     <b-td>{{item.nama_mata_pelajaran}}</b-td>
                     <b-td>{{item.rombel}}</b-td>
                     <b-td>{{item.wali_kelas}}</b-td>
-                    <b-td class="text-center">{{item.pd}}</b-td>
-                    <b-td class="text-center">{{item.pd_dinilai}}</b-td>
+                    <template v-if="item.mata_pelajaran_id === 800001000">
+                      <b-td class="text-center">{{item.pd_pkl_count}}</b-td>
+                      <b-td class="text-center">{{item.pd_pkl_dinilai}}</b-td>
+                    </template>
+                    <template v-else>
+                      <b-td class="text-center">{{item.pd}}</b-td>
+                      <b-td class="text-center">{{item.pd_dinilai}}</b-td>
+                    </template>
                     <b-td class="text-center">
-                      <b-button variant="success" size="sm" @click="detil(item.pembelajaran_id)">Detil</b-button>
+                      <b-button variant="success" size="sm" @click="detil(item)">Detil</b-button>
                     </b-td>
                   </b-tr>
                 </template>
@@ -45,60 +51,7 @@
           </b-table-simple>
         </div>
       </b-card-body>
-      <b-modal ref="detil-modal" size="xl" scrollable :title="title" cancel-title="Tutup" @ok="handleOk" ok-variant="primary">
-        <b-table-simple bordered responsive>
-            <b-thead>
-              <b-tr>
-                <b-th class="text-center">No</b-th>
-                <b-th class="text-center">Nama</b-th>
-                <b-th class="text-center">NISN</b-th>
-                <b-th class="text-center">Agama</b-th>
-                <b-th class="text-center">Nilai Akhir</b-th>
-                <b-th class="text-center">Capaian Kompetensi</b-th>
-              </b-tr>
-            </b-thead>
-            <b-tbody>
-              <template v-if="data_siswa.length">
-                <template v-for="(pd, index) in data_siswa">
-                  <b-tr>
-                    <b-td class="text-center">{{index + 1}}</b-td>
-                    <b-td>{{pd.nama}}</b-td>
-                    <b-td class="text-center">{{pd.nisn}}</b-td>
-                    <b-td class="text-center">{{pd.agama.nama}}</b-td>
-                    <b-td class="text-center" v-if="merdeka">
-                      {{(pd.nilai_akhir_kurmer) ? pd.nilai_akhir_kurmer.nilai : '-'}}
-                    </b-td>
-                    <b-td class="text-center" v-else>
-                      {{(pd.nilai_akhir_pengetahuan) ? pd.nilai_akhir_pengetahuan.nilai : '-'}}
-                    </b-td>
-                    <b-td v-if="pd.deskripsi_mapel">
-                      <template v-if="pd.deskripsi_mapel.deskripsi_pengetahuan && pd.deskripsi_mapel.deskripsi_keterampilan">
-                        {{pd.deskripsi_mapel.deskripsi_pengetahuan}}
-                        <hr>
-                        {{pd.deskripsi_mapel.deskripsi_keterampilan}}
-                      </template>
-                      <template v-if="pd.deskripsi_mapel.deskripsi_pengetahuan && !pd.deskripsi_mapel.deskripsi_keterampilan">
-                        {{pd.deskripsi_mapel.deskripsi_pengetahuan}}
-                      </template>
-                      <template v-if="!pd.deskripsi_mapel.deskripsi_pengetahuan && pd.deskripsi_mapel.deskripsi_keterampilan">
-                        {{pd.deskripsi_mapel.deskripsi_keterampilan}}
-                      </template>
-                    </b-td>
-                    <b-td v-else>-</b-td>
-                  </b-tr>
-                </template>
-              </template>
-            </b-tbody>
-          </b-table-simple>
-          <template #modal-footer="{ ok, cancel }">
-            <b-overlay :show="loading_modal" rounded opacity="0.6" spinner-small spinner-variant="secondary" class="d-inline-block">
-              <b-button @click="cancel()">Tutup</b-button>
-            </b-overlay>
-            <b-overlay :show="loading_modal" rounded opacity="0.6" spinner-small spinner-variant="primary" class="d-inline-block">
-              <b-button variant="primary" @click="ok()" v-if="sub_mapel">Generate Nilai</b-button>
-            </b-overlay>
-        </template>
-      </b-modal>
+      <detil-nilai :title="title" :data_siswa="data_siswa" :merdeka="merdeka" :is_ppa="is_ppa" :sub_mapel="sub_mapel" :induk="induk" :meta="meta" @detil="HandleDetil"></detil-nilai>
     </b-card>
     <dashboard-walas v-if="hasRole('wali')" @detil="HandleDetil"></dashboard-walas>
   </div>
@@ -107,6 +60,8 @@
 <script>
 import { BCard, BCardBody, BSpinner, BTableSimple, BTbody, BThead, BTr, BTd, BTh, BButton, BOverlay } from 'bootstrap-vue'
 import DashboardWalas from './DashboardWalas.vue'
+import DetilNilai from './../components/modal/dashboard/DetilNilai.vue'
+import eventBus from '@core/utils/eventBus';
 export default {
   components: {
     BCard,
@@ -121,6 +76,7 @@ export default {
     BButton,
     BOverlay,
     DashboardWalas,
+    DetilNilai,
   },
   computed: {
     semester(){
@@ -135,9 +91,12 @@ export default {
       loading_modal: false,
       data_siswa: [],
       merdeka: false,
+      is_ppa: false,
       sub_mapel: 0,
       pembelajaran_id: null,
       rombongan_belajar_id: null,
+      meta: {},
+      induk: null,
     }
   },
   created() {
@@ -158,56 +117,45 @@ export default {
         console.log(error)
       })
     },
-    detil(pembelajaran_id){
-      this.pembelajaran_id = pembelajaran_id
+    detil(item){
+      this.pembelajaran_id = item.pembelajaran_id
+      this.rombongan_belajar_id = item.rombongan_belajar_id
+      this.meta = {
+        kkm: item.kkm,
+        kelompok_id: item.kelompok_id,
+        semester_id: item.semester_id,
+      }
       this.loading_modal = true
       this.$http.post('/dashboard/detil-penilaian', {
-        pembelajaran_id: pembelajaran_id,
-      }).then(response => {
-        this.loading_modal = false
-        let getData = response.data
-        this.sub_mapel = getData.pembelajaran.tema_count
-        this.rombongan_belajar_id = getData.pembelajaran.rombongan_belajar_id
-        this.title = getData.title
-        this.data_siswa = getData.data_siswa
-        this.merdeka = getData.merdeka
-        this.$refs['detil-modal'].show()
-      }).catch(error => {
-        console.log(error)
-      })
-    },
-    HandleDetil(pembelajaran_id){
-      this.detil(pembelajaran_id)
-    },
-    handleOk(bvModalEvent) {
-      // Prevent modal from closing
-      bvModalEvent.preventDefault()
-      // Trigger submit handler
-      this.handleSubmit()
-    },
-    handleSubmit() {
-      this.loading_modal = true
-      this.$http.post('/dashboard/generate-nilai', {
         pembelajaran_id: this.pembelajaran_id,
         rombongan_belajar_id: this.rombongan_belajar_id,
       }).then(response => {
         this.loading_modal = false
         let getData = response.data
-        console.log(getData);
-        this.$swal({
-          icon: getData.icon,
-          title: getData.title,
-          text: getData.text,
-          customClass: {
-            confirmButton: 'btn btn-success',
-          },
-          allowOutsideClick: false,
-        }).then(result => {
-          this.detil(this.pembelajaran_id)
+        this.induk = getData.pembelajaran.induk
+        if(getData.pembelajaran.mata_pelajaran_id == 800001000){
+          this.sub_mapel = 1
+        } else {
+          this.sub_mapel = getData.pembelajaran.tema_count
+        }
+        this.title = getData.title
+        this.data_siswa = getData.data_siswa
+        this.merdeka = getData.merdeka
+        this.is_ppa = getData.is_ppa
+        //this.$refs['detil-modal'].show()
+        eventBus.$emit('open-modal-detil-nilai', {
+          data: {
+            pembelajaran_id: this.pembelajaran_id,
+            mata_pelajaran_id: getData.pembelajaran.mata_pelajaran_id,
+            rombongan_belajar_id: this.rombongan_belajar_id,
+          }
         })
       }).catch(error => {
         console.log(error)
       })
+    },
+    HandleDetil(item){
+      this.detil(item)
     },
   },
 }

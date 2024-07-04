@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Anggota_rombel extends Model
 {
-	//use \Staudenmeir\EloquentHasManyDeep\HasRelationships;
+	use \Staudenmeir\EloquentHasManyDeep\HasRelationships;
 	//use \Staudenmeir\EloquentEagerLimit\HasEagerLimit;
     use HasFactory, SoftDeletes;
     public $incrementing = false;
@@ -194,7 +194,10 @@ class Anggota_rombel extends Model
 		return $this->hasOne(Nilai_akhir::class, 'anggota_rombel_id', 'anggota_rombel_id')->where('kompetensi_id', 3);
 	}
 	public function nilai_akhir_kurmer(){
-		return $this->hasOne(Nilai_akhir::class, 'pembelajaran_id', 'pembelajaran_id')->where('kompetensi_id', 4);
+		return $this->hasOne(Nilai_akhir::class, 'anggota_rombel_id', 'anggota_rombel_id')->where('kompetensi_id', 4);
+	}
+	public function nilai_akhir_induk(){
+		return $this->hasOne(Nilai_akhir::class, 'anggota_rombel_id', 'anggota_rombel_id')->where('kompetensi_id', 99);
 	}
 	public function nilai_ukk_satuan(){
 		return $this->hasOne(Nilai_ukk::class, 'anggota_rombel_id', 'anggota_rombel_id');
@@ -234,6 +237,9 @@ class Anggota_rombel extends Model
 	public function capaian_kompeten(){
 		return $this->hasMany(Tp_nilai::class, 'anggota_rombel_id', 'anggota_rombel_id');
 	}
+	public function tp_nilai(){
+		return $this->hasMany(Tp_nilai::class, 'anggota_rombel_id', 'anggota_rombel_id');
+	}
 	public function tp_kompeten(){
 		return $this->hasMany(Tp_nilai::class, 'anggota_rombel_id', 'anggota_rombel_id')->where('kompeten', 1);
 	}
@@ -245,5 +251,9 @@ class Anggota_rombel extends Model
 	}
 	public function kd_inkompeten(){
 		return $this->hasMany(Kd_nilai::class, 'anggota_rombel_id', 'anggota_rombel_id')->where('kompeten', 0);
+	}
+	public function nilai_pts()
+	{
+		return $this->hasOne(Nilai_pts::class, 'anggota_rombel_id', 'anggota_rombel_id');
 	}
 }

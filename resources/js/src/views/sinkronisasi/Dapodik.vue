@@ -36,38 +36,29 @@
           </b-overlay>
         </template>
         <template v-else>
-          <b-tabs justified>
-            <b-tab title="Rombongan Belajar">
-              <b-card-text>
-                <rombel-dapodik :form="form" />
-              </b-card-text>
-            </b-tab>
-            <b-tab title="Mata Evaluasi Rapor" @click="getMatev">
-              <matev-rapor :form="form" :loading="loading" :isBusy="false" :items="items" :fields="fields" :meta="meta" @per_page="handlePerPage" @pagination="handlePagination" @search="handleSearch" @sort="handleSort"  />
-            </b-tab>
-            <!--b-tab title="Rekapitulasi" @click="getRekap">
-              <b-card-text>
-                <b-table-simple bordered responsive>
-                  <b-thead>
-                    <b-tr variant="light">
-                      <b-th class="text-center">No</b-th>
-                      <b-th class="text-center">Data</b-th>
-                      <b-th class="text-center">Jml Data e-Rapor</b-th>
-                      <b-th class="text-center">Jml Data Dapodik</b-th>
-                    </b-tr>
-                  </b-thead>
-                  <b-tbody>
-                    <b-tr>
-                      <b-td class="text-center">1</b-td>
-                      <b-td>Rombongan Belajar</b-td>
-                      <b-td class="text-center">2</b-td>
-                      <b-td class="text-center">3</b-td>
-                    </b-tr>
-                  </b-tbody>
-                </b-table-simple>
-              </b-card-text>
-            </b-tab-->
-          </b-tabs>
+          <template v-if="dapodik">
+            <template v-if="dapodik.results">
+              <b-tabs justified>
+                <b-tab title="Rombongan Belajar">
+                  <b-card-text>
+                    <rombel-dapodik :form="form" />
+                  </b-card-text>
+                </b-tab>
+                <b-tab title="Mata Evaluasi Rapor" @click="getMatev">
+                  <matev-rapor :form="form" :loading="loading" :isBusy="false" :items="items" :fields="fields" :meta="meta" @per_page="handlePerPage" @pagination="handlePagination" @search="handleSearch" @sort="handleSort"  />
+                </b-tab>
+              </b-tabs>
+            </template>
+            <template v-else>
+              <b-alert show variant="danger">
+                <div class="alert-body text-center">
+                  <h2>Koneksi ke Dapodik Gagal!</h2>
+                  <p>{{dapodik.message}}</p>
+                  <p>Silahkan periksa kembali pengaturan Web Service Dapodik</p>
+                </div>
+              </b-alert>
+            </template>
+          </template>
         </template>
       </div>
     </b-card-body>
@@ -161,6 +152,7 @@ export default {
       sortBy: 'mata_pelajaran_id',
       sortByDesc: false,
       sortDesc: false,
+      dapodik: null,
     }
   },
   created() {
@@ -180,6 +172,7 @@ export default {
         this.lengkap = (getData.url_dapodik) ? true : false
         this.form.url_dapodik = getData.url_dapodik
         this.form.token_dapodik = getData.token_dapodik
+        this.dapodik = getData.dapodik
       })
     },
     getMatevRapor(){
@@ -235,15 +228,10 @@ export default {
             this.loadPostsData()
           })
         }
-        console.log(getData);
       })
     },
     getMatev(){
-      console.log('getMatev');
       this.getMatevRapor()
-    },
-    getRekap(){
-      console.log('getRekap');
     },
     handlePerPage(val) {
       this.per_page = val

@@ -31,6 +31,9 @@
         <template v-slot:cell(pks)="row">
           {{row.item.akt_pd.judul_akt_pd}}
         </template>
+        <template v-slot:cell(pd_pkl_count)="row">
+          {{row.item.rombongan_belajar.anggota_rombel_count}}
+        </template>
         <template v-slot:cell(actions)="row">
           <b-dropdown id="dropdown-dropleft" dropleft text="Aksi" variant="success" size="sm">
             <b-dropdown-item href="javascript:" @click="aksi(row.item.pkl_id, 'detil')"><font-awesome-icon icon="fa-solid fa-eye" /> Detil</b-dropdown-item>
@@ -42,12 +45,11 @@
           {{row.item.kelas.nama}}
         </template>
         <template v-slot:cell(cetak)="row">
-          <b-dropdown id="dropdown-dropleft" dropleft text="Cetak Rapor" variant="success" size="sm">
+          <b-dropdown id="dropdown-dropleft" dropleft text="Daftar Nilai" variant="success" size="sm">
             <template v-for="(pkl, index) in row.item.all_pd_pkl">
               <b-dropdown-item href="javascript:" @click="cetakPkl(row.item.peserta_didik_id, pkl.pkl_id)"><font-awesome-icon icon="fa-solid fa-print" /> {{ pkl.praktik_kerja_lapangan.nama_dudi }}</b-dropdown-item>
             </template>
           </b-dropdown>
-          <!--b-button size="sm" variant="primary" @click="cetakPkl(row.item.peserta_didik_id, row.item.pd_pkl.pkl_id)">Cetak Rapor</b-button-->
         </template>
       </b-table>
     </b-overlay>
@@ -142,7 +144,6 @@ export default {
       window.open(`/cetak/rapor-pkl/${peserta_didik_id}/${pkl_id}/${this.user.guru_id}/${this.user.semester.semester_id}`, `_blank`);
     },
     changeRombel(val){
-      //console.log(val);
       this.rombongan_belajar_id = val
       this.$emit('rombel', val)
     }

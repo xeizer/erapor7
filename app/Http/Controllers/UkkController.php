@@ -17,11 +17,10 @@ use App\Models\Rombongan_belajar;
 class UkkController extends Controller
 {
     public function index(){
-        $data = Rencana_ukk::where(function($query){
+        $data = Rencana_ukk::withWhereHas('paket_ukk')->where(function($query){
             $query->where('sekolah_id', request()->sekolah_id);
             $query->where('semester_id', request()->semester_id);
         })->with([
-            'paket_ukk',
             'guru_internal' => function($query){
                 $query->select('guru_id', 'nama');
             },
@@ -138,21 +137,23 @@ class UkkController extends Controller
             $peserta_didik_id = $segments->first();
             $anggota_rombel_id = $segments->last();
             $deleted[] = $anggota_rombel_id;
-            Nilai_ukk::firstOrCreate(
-                [
-                'rencana_ukk_id'		=> $rencana_ukk->rencana_ukk_id,
-                'anggota_rombel_id'		=> $anggota_rombel_id,
-                'peserta_didik_id'		=> $peserta_didik_id,
-                ],
-                [
-                'sekolah_id' 			=> request()->sekolah_id,
-                'nilai'					=> 0,
-                'last_sync' 			=> now(), 
-                ]
-            );
+            if($anggota_rombel_id){
+                Nilai_ukk::firstOrCreate(
+                    [
+                    'rencana_ukk_id'		=> $rencana_ukk->rencana_ukk_id,
+                    'anggota_rombel_id'		=> $anggota_rombel_id,
+                    'peserta_didik_id'		=> $peserta_didik_id,
+                    ],
+                    [
+                    'sekolah_id' 			=> request()->sekolah_id,
+                    'nilai'					=> 0,
+                    'last_sync' 			=> now(), 
+                    ]
+                );
+            }
         }
-        if($deleted){
-            Nilai_ukk::where('rencana_ukk_id', $rencana_ukk->rencana_ukk_id)->whereNotIn('anggota_rombel_id', $deleted)->delete();
+        if(array_filter($deleted)){
+            Nilai_ukk::where('rencana_ukk_id', $rencana_ukk->rencana_ukk_id)->whereNotIn('anggota_rombel_id', array_filter($deleted))->delete();
         }
         if($insert){
             $data = [
@@ -210,7 +211,14 @@ class UkkController extends Controller
     public function paket_ukk(){
         $data = Paket_ukk::where(function($query){
             $query->where('sekolah_id', request()->sekolah_id);
-        })->with(['jurusan'])->withCount('unit_ukk')
+        })->with(['jurusan'])->withCount([
+            'unit_ukk',
+            'rencana_ukk' => function($query){
+                $query->whereHas('nilai_ukk', function($query){
+                    $query->where('nilai', '>', 0);
+                });
+            }
+        ])
         ->orderBy('jurusan_id', 'asc')
         ->orderBy('kurikulum_id', 'asc')
         ->orderBy('nomor_paket', 'asc')
@@ -252,8 +260,7 @@ class UkkController extends Controller
             ]
         );
         foreach(request()->nomor_paket as $key => $nomor_paket){
-            $insert++;
-            Paket_ukk::create([
+            $insert = Paket_ukk::create([
                 'paket_ukk_id'      => Str::uuid(),
                 'sekolah_id'        => request()->sekolah_id,
                 'jurusan_id'		=> request()->jurusan_id,
@@ -313,7 +320,8 @@ class UkkController extends Controller
                 'unit_ukk_id'   => Str::uuid(),
                 'paket_ukk_id' 	=> request()->paket_ukk_id,
                 'kode_unit'		=> $kode_unit,
-                'nama_unit'		=> request()->nama_unit[$key],
+                'nama_unit_id'		=> request()->nama_unit_id[$key],
+                'nama_unit_en'		=> request()->nama_unit_en[$key],
                 'last_sync'		=> now(),
             ]);
         }
@@ -360,7 +368,8 @@ class UkkController extends Controller
         foreach(request()->kode_unit as $unit_ukk_id => $kode_unit){
             Unit_ukk::where('unit_ukk_id', $unit_ukk_id)->update([
                 'kode_unit' => $kode_unit,
-                'nama_unit' => request()->nama_unit[$unit_ukk_id],
+                'nama_unit_id' => request()->nama_unit_id[$unit_ukk_id],
+                'nama_unit_en' => request()->nama_unit_en[$unit_ukk_id],
             ]);
         }
         $insert = 1;
@@ -386,7 +395,7 @@ class UkkController extends Controller
             $query->where('sekolah_id', request()->sekolah_id);
             $query->where('semester_id', request()->semester_id);
             $query->where('internal', request()->guru_id);
-        })->with(['paket_ukk'])->get();
+        })->withWhereHas('paket_ukk')->get();
         foreach($get as $val){
             $rencana_ukk[] = [
                 'rencana_ukk_id' => $val->rencana_ukk_id,
@@ -467,6 +476,31 @@ class UkkController extends Controller
                 'icon' => 'error',
                 'title' => 'Gagal!',
                 'text' => 'Unit UKK gagal dihapus. Silahkan coba beberapa saat lagi!',
+            ];
+        }
+        return response()->json($data);
+    }
+    public function delete_paket_ukk(){
+        $find = Paket_ukk::find(request()->paket_ukk_id);
+        if($find){
+            if($find->delete()){
+                $data = [
+                    'icon' => 'success',
+                    'title' => 'Berhasil!',
+                    'text' => 'Paket UKK berhasil dihapus',
+                ];
+            } else {
+                $data = [
+                    'icon' => 'error',
+                    'title' => 'Gagal!',
+                    'text' => 'Paket UKK gagal dihapus. Silahkan coba beberapa saat lagi!',
+                ];
+            }
+        } else {
+            $data = [
+                'icon' => 'error',
+                'title' => 'Gagal!',
+                'text' => 'Paket UKK tidak ditemukan. Silahkan muat ulang laman ini!',
             ];
         }
         return response()->json($data);

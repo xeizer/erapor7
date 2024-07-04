@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Pembelajaran extends Model
 {
+	use \Staudenmeir\EloquentHasManyDeep\HasRelationships;
+	use \Staudenmeir\EloquentHasManyDeep\HasTableAlias;
     use HasFactory, SoftDeletes;
     public $incrementing = false;
 	public $keyType = 'string';
@@ -230,6 +232,10 @@ class Pembelajaran extends Model
 	public function induk(){
 		return $this->hasOne(Pembelajaran::class, 'pembelajaran_id', 'induk_pembelajaran_id');
 	}
+	public function sub_mapel()
+	{
+		return $this->hasMany(Pembelajaran::class, 'induk_pembelajaran_id', 'pembelajaran_id');
+	}
 	public function tema()
 	{
 		return $this->hasMany(Pembelajaran::class, 'induk_pembelajaran_id', 'pembelajaran_id');
@@ -241,6 +247,12 @@ class Pembelajaran extends Model
 	public function all_nilai_akhir_pengetahuan(){
 		return $this->hasMany(Nilai_akhir::class, 'pembelajaran_id', 'pembelajaran_id')->where('kompetensi_id', 1);
 	}
+	public function all_nilai_akhir_keterampilan(){
+		return $this->hasMany(Nilai_akhir::class, 'pembelajaran_id', 'pembelajaran_id')->where('kompetensi_id', 2);
+	}
+	public function all_nilai_akhir_pk(){
+		return $this->hasMany(Nilai_akhir::class, 'pembelajaran_id', 'pembelajaran_id')->where('kompetensi_id', 3);
+	}
 	public function all_nilai_akhir_kurmer(){
 		return $this->hasMany(Nilai_akhir::class, 'pembelajaran_id', 'pembelajaran_id')->where('kompetensi_id', 4);
 	}
@@ -251,4 +263,55 @@ class Pembelajaran extends Model
 	{
 		return $this->hasMany(Nilai_tp::class, 'pembelajaran_id', 'pembelajaran_id');
 	}
+	public function nilai_pts(){
+		return $this->hasManyThrough(
+            Nilai_pts::class,
+			Rapor_pts::class,
+			'pembelajaran_id',
+			'rapor_pts_id',
+			'pembelajaran_id',
+			'rapor_pts_id'
+        );
+	}
+	public function single_nilai_pts(){
+		return $this->hasOneThrough(
+            Nilai_pts::class,
+			Rapor_pts::class,
+			'pembelajaran_id',
+			'rapor_pts_id',
+			'pembelajaran_id',
+			'rapor_pts_id'
+        );
+	}
+	public function pd_pkl()
+    {
+		return $this->hasManyDeep(
+			Pd_pkl::class, 
+			[Rombongan_belajar::class, Praktik_kerja_lapangan::class],
+			[
+				'rombongan_belajar_id', // Foreign key on the "Rombongan_belajar" table.
+				'rombongan_belajar_id',    // Foreign key on the "Praktik_kerja_lapangan" table.
+				'pkl_id'     // Foreign key on the "Pd_pkl" table.
+			],
+			[
+				'rombongan_belajar_id', // Local key on the "Praktik_kerja_lapangan" table.
+				'rombongan_belajar_id', // Local key on the "Rombongan_belajar" table.
+				'pkl_id'  // Local key on the "Praktik_kerja_lapangan" table.
+			]
+		);
+        return $this->hasManyDeep(
+            Comment::class,
+            [User::class, Post::class], // Intermediate models, beginning at the far parent (Country).
+            [
+               'country_id', // Foreign key on the "users" table.
+               'user_id',    // Foreign key on the "posts" table.
+               'post_id'     // Foreign key on the "comments" table.
+            ],
+            [
+              'id', // Local key on the "countries" table.
+              'id', // Local key on the "users" table.
+              'id'  // Local key on the "posts" table.
+            ]
+        );
+    }
 }

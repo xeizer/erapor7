@@ -16,6 +16,25 @@
             <strong>Loading...</strong>
           </div>
         </template>
+        <!-- UKK START -->
+        <template v-slot:cell(jurusan)="row">
+          {{row.item.paket_ukk.jurusan.nama_jurusan}}
+        </template>
+        <template v-slot:cell(kode)="row">
+          {{row.item.paket_ukk.nomor_paket}}
+        </template>
+        <template v-slot:cell(nama)="row">
+          {{row.item.paket_ukk.nama_paket_id}}
+        </template>
+        <template v-slot:cell(detil_ukk)="row">
+          <b-button variant="success" size="sm" @click="detilUkk(row.item.rencana_ukk_id)">Detil</b-button>
+        </template>
+        <!-- UKK END -->
+         <!--Ekskul Start-->
+         <template v-slot:cell(nama_ekskul)="row">
+          {{row.item.nama}}
+        </template>
+         <!--Ekskul End-->
         <template v-slot:cell(kelas)="row">
           {{row.item.rombongan_belajar.nama}}
         </template>
@@ -26,7 +45,7 @@
           {{row.item.akt_pd.judul_akt_pd}}
         </template>
         <template v-slot:cell(detil)="row">
-          <b-button variant="success" size="sm" @click="getDetilNilai(row.item.pembelajaran_id)">Detil</b-button>
+          <b-button variant="success" size="sm" @click="getDetilNilai(row.item)">Detil</b-button>
         </template>
         <template v-slot:cell(detil_pkl)="row">
           <b-button variant="success" size="sm" @click="detilPkl(row.item.pkl_id)">Detil</b-button>
@@ -129,11 +148,14 @@ export default {
         ekstrakurikuler_id: ekstrakurikuler_id,
       })
     },
-    getDetilNilai(pembelajaran_id){
-      this.$emit('detil', pembelajaran_id);
+    getDetilNilai(item){
+      this.$emit('detil', item);
     },
     detilPkl(pkl_id){
       this.$emit('detil', pkl_id)
+    },
+    detilUkk(rencana_ukk_id){
+      this.$emit('detil', rencana_ukk_id)
     },
     loadPerPage(val) {
       this.$emit('per_page', this.meta.per_page)

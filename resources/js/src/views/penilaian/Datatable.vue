@@ -2,7 +2,7 @@
   <div>
     <b-row>
       <b-col md="4" class="mb-2">
-        <b-form-select v-model="meta.per_page" :options="[10, 25, 50, 100]" @change="loadPerPage"></b-form-select>
+        <v-select v-model="meta.per_page" :options="[10, 25, 50, 100]" @input="loadPerPage"></v-select>
       </b-col>
       <b-col md="4" offset-md="4">
         <b-form-input @input="search" placeholder="Cari data..."></b-form-input>
@@ -33,8 +33,8 @@
           <b-badge variant="danger" v-else>Negati</b-badge>
         </template>
         <template v-slot:cell(actions)="row">
-          <b-dropdown id="dropdown-dropleft" dropleft text="Aksi" variant="primary" size="sm">
-            <b-dropdown-item href="javascript:" @click="edit(row.item)"><font-awesome-icon icon="fa-solid fa-pencil" /> Edit</b-dropdown-item>
+          <b-dropdown id="dropdown-dropleft" dropleft text="Aksi" variant="primary" size="sm" boundary="viewport">
+            <b-dropdown-item :to="{name: 'penilaian-edit-sikap', params: {id: row.item.nilai_budaya_kerja_id}}"><font-awesome-icon icon="fa-solid fa-pencil" /> Edit</b-dropdown-item>
             <b-dropdown-item href="javascript:" @click="hapus(row.item.nilai_budaya_kerja_id)"><font-awesome-icon icon="fa-solid fa-trash" /> Hapus</b-dropdown-item>
           </b-dropdown>
         </template>
@@ -53,12 +53,14 @@
 
 <script>
 import _ from 'lodash' //IMPORT LODASH, DIMANA AKAN DIGUNAKAN UNTUK MEMBUAT DELAY KETIKA KOLOM PENCARIAN DIISI
-import { BRow, BCol, BFormInput, BFormSelect, BFormSelectOption, BTable, BSpinner, BPagination, BButton, BOverlay, BDropdown, BDropdownItem, BBadge } from 'bootstrap-vue'
+import { BRow, BCol, BFormInput, BTable, BSpinner, BPagination, BButton, BOverlay, BDropdown, BDropdownItem, BBadge } from 'bootstrap-vue'
+import vSelect from 'vue-select'
 export default {
   components: {
+    vSelect,
     BRow,
     BCol,
-    BFormInput, BFormSelect, BFormSelectOption,
+    BFormInput,
     BTable,
     BSpinner,
     BPagination,
@@ -120,11 +122,38 @@ export default {
     }
   },
   methods: {
-    edit(item){
-      this.$emit('edit', item)
-    },
-    hapus(nilai_budaya_kerja_id){
-      this.$emit('hapus', nilai_budaya_kerja_id)
+    hapus(id){
+      this.$swal({
+        title: 'Apakah Anda yakin?',
+        text: 'Tindakan ini tidak dapat dikembalikan!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yakin!',
+        customClass: {
+          confirmButton: 'btn btn-primary',
+          cancelButton: 'btn btn-outline-danger ml-1',
+        },
+        buttonsStyling: false,
+        allowOutsideClick: false,
+      }).then(result => {
+        if (result.value) {
+          this.$http.post('/penilaian/hapus-nilai-sikap', {
+            id: id,
+          }).then(response => {
+            let data = response.data
+            this.$swal({
+              icon: data.icon,
+              title: data.title,
+              text: data.text,
+              customClass: {
+                confirmButton: 'btn btn-success',
+              },
+            }).then(response => {
+              this.$emit('per_page', this.meta.per_page)
+            })
+          });
+        }
+      })
     },
     loadPerPage(val) {
       this.$emit('per_page', this.meta.per_page)

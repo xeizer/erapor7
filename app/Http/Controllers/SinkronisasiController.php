@@ -26,16 +26,16 @@ use DB;
 
 class SinkronisasiController extends Controller
 {
+    public function __construct()
+    {
+        set_time_limit(0);
+    }
     public function index(){
         $file = 'proses_sync_'.request()->sekolah_id.'.json';
         if(Storage::disk('public')->exists($file)){
 			Storage::disk('public')->delete($file);
 		}
-        $timezone = config('app.timezone');
-        $start = Carbon::create(date('Y'), date('m'), date('d'), '00', '00', '01', 'Asia/Jakarta');
-        $end = Carbon::create(date('Y'), date('m'), date('d'), '03', '00', '00', 'Asia/Jakarta');
-        $now = Carbon::now()->timezone($timezone);
-        $jam_sinkron = Carbon::now()->timezone($timezone)->isBetween($start, $end, false);
+        $jam_sinkron = jam_sinkron();
         $dapodik = NULL;
         $erapor = $this->ref_erapor();
         if(!$jam_sinkron){
@@ -44,110 +44,118 @@ class SinkronisasiController extends Controller
                 $dapodik = $dapodik['dapodik'];
             }
         }
+        $general = [
+            [
+                'nama' => 'Sekolah',
+                'dapodik' => 1,
+                'erapor' => $erapor['sekolah'],
+                'sinkron' => $erapor['sekolah'],
+                'aksi' => 'sekolah',
+                'server' => 'dapodik',
+                'icon' => FALSE,
+                'html' => NULL,
+            ],
+            [
+                'nama' => 'GTK',
+                'dapodik' => ($dapodik) ? $dapodik->ptk_terdaftar : 0,
+                'erapor' => $erapor['ptk'],
+                'sinkron' => $erapor['ptk'],
+                'aksi' => 'ptk',
+                'server' => 'dapodik',
+                'icon' => FALSE,
+                'html' => NULL,
+            ],
+            [
+                'nama' => 'Rombongan Belajar',
+                'dapodik' => ($dapodik) ? $dapodik->rombongan_belajar : 0,
+                'erapor' => $erapor['rombongan_belajar'],
+                'sinkron' => $erapor['rombongan_belajar'],
+                'aksi' => 'rombongan_belajar',
+                'server' => 'dapodik',
+                'icon' => TRUE,
+                'html' => 'Jumlah Rombel Reguler &amp; Rombel Matpel Pilihan',
+            ],
+            [
+                'nama' => 'Peserta Didik Aktif',
+                'dapodik' => ($dapodik) ? $dapodik->registrasi_peserta_didik : 0,
+                'erapor' => $erapor['peserta_didik_aktif'],
+                'sinkron' => $erapor['peserta_didik_aktif'],
+                'aksi' => 'peserta_didik_aktif',
+                'server' => 'dapodik',
+                'icon' => FALSE,
+                'html' => NULL,
+            ],
+            [
+                'nama' => 'Peserta Didik Keluar',
+                'dapodik' => ($dapodik) ? $dapodik->siswa_keluar_dapodik : 0,
+                'erapor' => $erapor['peserta_didik_keluar'],
+                'sinkron' => $erapor['peserta_didik_keluar'],
+                'aksi' => 'peserta_didik_keluar',
+                'server' => 'dapodik',
+                'icon' => FALSE,
+                'html' => NULL,
+            ],
+            [
+                'nama' => 'Anggota Rombel Matpel Pilihan',
+                'dapodik' => ($dapodik) ? $dapodik->anggota_rombel_pilihan : 0,
+                'erapor' => $erapor['anggota_rombel_pilihan'],
+                'sinkron' => $erapor['anggota_rombel_pilihan'],
+                'aksi' => 'anggota_rombel_pilihan',
+                'server' => 'dapodik',
+                'icon' => FALSE,
+                'html' => NULL,
+            ],
+            [
+                'nama' => 'Pembelajaran',
+                'dapodik' => ($dapodik) ? $dapodik->pembelajaran_dapodik : 0,
+                'erapor' => $erapor['pembelajaran'],
+                'sinkron' => $erapor['pembelajaran'],
+                'aksi' => 'pembelajaran',
+                'server' => 'dapodik',
+                'icon' => TRUE,
+                'html' => 'Jumlah Pembelajaran Reguler &amp; Pembelajaran Matpel Pilihan',
+            ],
+            [
+                'nama' => 'Ekstrakurikuler',
+                'dapodik' => ($dapodik) ? $dapodik->ekskul_dapodik : 0,
+                'erapor' => $erapor['ekstrakurikuler'],
+                'sinkron' => $erapor['ekstrakurikuler'],
+                'aksi' => 'ekstrakurikuler',
+                'server' => 'dapodik',
+                'icon' => FALSE,
+                'html' => NULL,
+            ],
+            [
+                'nama' => 'Anggota Ekstrakurikuler',
+                'dapodik' => ($dapodik) ? $dapodik->anggota_ekskul_dapodik : 0,
+                'erapor' => $erapor['anggota_ekskul'],
+                'sinkron' => $erapor['anggota_ekskul'],
+                'aksi' => 'anggota_ekskul',
+                'server' => 'dapodik',
+                'icon' => FALSE,
+                'html' => NULL,
+            ],
+        ];
+        $smk = [
+            [
+                'nama' => 'Relasi Dunia Usaha & Industri',
+                'dapodik' => ($dapodik) ? $dapodik->dudi_dapodik : 0,
+                'erapor' => $erapor['dudi'],
+                'sinkron' => $erapor['dudi'],
+                'aksi' => 'dudi',
+                'server' => 'dapodik',
+                'icon' => FALSE,
+                'html' => NULL,
+            ],
+        ];
+        if($erapor['data']?->bentuk_pendidikan_id && $erapor['data']?->bentuk_pendidikan_id === 15){
+            $data_sinkron = array_merge($general, $smk);
+        } else {
+            $data_sinkron = $general;
+        }
         $data = [
             'jam_sinkron' => $jam_sinkron,
-            'data_sinkron' => [
-                [
-                    'nama' => 'Sekolah',
-                    'dapodik' => 1,
-                    'erapor' => $erapor['sekolah'],
-                    'sinkron' => $erapor['sekolah'],
-                    'aksi' => 'sekolah',
-                    'server' => 'dapodik',
-                    'icon' => FALSE,
-                    'html' => NULL,
-                ],
-                [
-                    'nama' => 'GTK',
-                    'dapodik' => ($dapodik) ? $dapodik->ptk_terdaftar : 0,
-                    'erapor' => $erapor['ptk'],
-                    'sinkron' => $erapor['ptk'],
-                    'aksi' => 'ptk',
-                    'server' => 'dapodik',
-                    'icon' => FALSE,
-                    'html' => NULL,
-                ],
-                [
-                    'nama' => 'Rombongan Belajar',
-                    'dapodik' => ($dapodik) ? $dapodik->rombongan_belajar : 0,
-                    'erapor' => $erapor['rombongan_belajar'],
-                    'sinkron' => $erapor['rombongan_belajar'],
-                    'aksi' => 'rombongan_belajar',
-                    'server' => 'dapodik',
-                    'icon' => TRUE,
-                    'html' => 'Jumlah Rombel Reguler &amp; Rombel Matpel Pilihan',
-                ],
-                [
-                    'nama' => 'Peserta Didik Aktif',
-                    'dapodik' => ($dapodik) ? $dapodik->registrasi_peserta_didik : 0,
-                    'erapor' => $erapor['peserta_didik_aktif'],
-                    'sinkron' => $erapor['peserta_didik_aktif'],
-                    'aksi' => 'peserta_didik_aktif',
-                    'server' => 'dapodik',
-                    'icon' => FALSE,
-                    'html' => NULL,
-                ],
-                [
-                    'nama' => 'Peserta Didik Keluar',
-                    'dapodik' => ($dapodik) ? $dapodik->siswa_keluar_dapodik : 0,
-                    'erapor' => $erapor['peserta_didik_keluar'],
-                    'sinkron' => $erapor['peserta_didik_keluar'],
-                    'aksi' => 'peserta_didik_keluar',
-                    'server' => 'dapodik',
-                    'icon' => FALSE,
-                    'html' => NULL,
-                ],
-                [
-                    'nama' => 'Anggota Rombel Matpel Pilihan',
-                    'dapodik' => ($dapodik) ? $dapodik->anggota_rombel_pilihan : 0,
-                    'erapor' => $erapor['anggota_rombel_pilihan'],
-                    'sinkron' => $erapor['anggota_rombel_pilihan'],
-                    'aksi' => 'anggota_rombel_pilihan',
-                    'server' => 'dapodik',
-                    'icon' => FALSE,
-                    'html' => NULL,
-                ],
-                [
-                    'nama' => 'Pembelajaran',
-                    'dapodik' => ($dapodik) ? $dapodik->pembelajaran_dapodik : 0,
-                    'erapor' => $erapor['pembelajaran'],
-                    'sinkron' => $erapor['pembelajaran'],
-                    'aksi' => 'pembelajaran',
-                    'server' => 'dapodik',
-                    'icon' => TRUE,
-                    'html' => 'Jumlah Pembelajaran Reguler &amp; Pembelajaran Matpel Pilihan',
-                ],
-                [
-                    'nama' => 'Ekstrakurikuler',
-                    'dapodik' => ($dapodik) ? $dapodik->ekskul_dapodik : 0,
-                    'erapor' => $erapor['ekstrakurikuler'],
-                    'sinkron' => $erapor['ekstrakurikuler'],
-                    'aksi' => 'ekstrakurikuler',
-                    'server' => 'dapodik',
-                    'icon' => FALSE,
-                    'html' => NULL,
-                ],
-                [
-                    'nama' => 'Anggota Ekstrakurikuler',
-                    'dapodik' => ($dapodik) ? $dapodik->anggota_ekskul_dapodik : 0,
-                    'erapor' => $erapor['anggota_ekskul'],
-                    'sinkron' => $erapor['anggota_ekskul'],
-                    'aksi' => 'anggota_ekskul',
-                    'server' => 'dapodik',
-                    'icon' => FALSE,
-                    'html' => NULL,
-                ],
-                [
-                    'nama' => 'Relasi Dunia Usaha & Industri',
-                    'dapodik' => ($dapodik) ? $dapodik->dudi_dapodik : 0,
-                    'erapor' => $erapor['dudi'],
-                    'sinkron' => $erapor['dudi'],
-                    'aksi' => 'dudi',
-                    'server' => 'dapodik',
-                    'icon' => FALSE,
-                    'html' => NULL,
-                ],
-            ],
+            'data_sinkron' => $data_sinkron,
         ];
         return response()->json($data);
     }
@@ -267,6 +275,7 @@ class SinkronisasiController extends Controller
             'ref_kd' => Kompetensi_dasar::withTrashed()->count(),
             'ref_cp' => Capaian_pembelajaran::count(),
             'ref_cp_sync' => $ref_cp_sync,
+            'data' => $sekolah,
         ];
     }
     public function proses_sync(){
@@ -291,35 +300,64 @@ class SinkronisasiController extends Controller
         return response()->json($data);
     }
     public function erapor(){
-        $last_sync = Sync_log::where('user_id', request()->user_id)->first();
+        $user = auth()->user();
+        $semester = Semester::find(request()->semester_id);
+        $data_sync = [
+            'username_dapo'		=> $user->email,
+            'password_dapo'		=> $user->password,
+            'npsn'				=> $user->sekolah->npsn,
+            'tahun_ajaran_id'	=> $semester->tahun_ajaran_id,
+            'semester_id'		=> $semester->semester_id,
+            'sekolah_id'		=> $user->sekolah->sekolah_id,
+            'kirim'              => TRUE,
+        ];
+        $response = NULL;
+        try {
+            $response = http_client('status', $data_sync);
+        } catch (\Exception $e){
+            //
+        }
+        $last_sync = Sync_log::where('user_id', request()->user_id)->orderBy('created_at', 'DESC')->first();
         $table_sync = [];
         $jumlah = 0;
         foreach(table_sync() as $table){
             $count = get_table($table, request()->sekolah_id, substr(request()->semester_id, 0, 4), request()->semester_id, 1);
             $jumlah += $count;
-            $table_sync[] = [
-                'data' => nama_table($table),
-                'count' => $count,
-            ];
+            if($count){
+                $table_sync[] = [
+                    'data' => nama_table($table),
+                    'count' => $count,
+                ];
+            }
         }
         $data = [
             'last_sync' => ($last_sync) ? $last_sync->updated_at->translatedFormat('d F Y H:i:s') : '-',
             'table_sync' => $table_sync,
             'jumlah' => $jumlah,
+            'response' => $response,
         ];
         return response()->json($data);
     }
     public function nilai_dapodik(){
         $url_dapodik = get_setting('url_dapodik', request()->sekolah_id, request()->semester_id);
+        $token_dapodik = get_setting('token_dapodik', request()->sekolah_id, request()->semester_id);
+        $response = Http::withToken($token_dapodik)->get($url_dapodik.'/WebService/getSekolah?npsn='.request()->npsn.'&semester_id='.request()->semester_id);
+        if($response->object()){
+            $body = $response->object();
+        } else {
+            $body = get_string_between($response->body(), '{', '}');
+            $body = json_decode('{'.$body.'}');
+        }
         $data = [
             'url_dapodik' => $url_dapodik,
-            'token_dapodik' => get_setting('token_dapodik', request()->sekolah_id, request()->semester_id),
+            'token_dapodik' => $token_dapodik,
             'rombel_erapor' => [],
             'rombel_dapodik' => [],
             'matev_dapodik' => [],
             'matev_erapor' => [],
             'nilai_dapodik' => [],
             'nilai_erapor' => [],
+            'dapodik' => $body,
         ];
         return response()->json($data);
     }
@@ -483,7 +521,7 @@ class SinkronisasiController extends Controller
         $all_response = [];
         try {
             $matev_rapor = Matev_rapor::with(['pembelajaran' => function($query){
-                $query->with(['all_nilai_akhir_pengetahuan', 'all_nilai_akhir_kurmer']);
+                $query->with(['all_nilai_akhir_pengetahuan', 'all_nilai_akhir_kurmer', 'deskripsi_mata_pelajaran']);
             }])->where(function($query){
                 $query->where('rombongan_belajar_id', request()->rombongan_belajar_id);
             })->get();
@@ -515,11 +553,17 @@ class SinkronisasiController extends Controller
                             }
                         } else {
                             foreach($matev->pembelajaran->all_nilai_akhir_kurmer as $nilai_akhir){
+                                $get_desc = $matev->pembelajaran->deskripsi_mata_pelajaran()->where('anggota_rombel_id', $nilai_akhir->anggota_rombel_id)->first();
+                                $deskripsi = NULL;
+                                if($get_desc){
+                                    $deskripsi = Str::of($get_desc->deskripsi_pengetahuan.' '.$get_desc->deskripsi_keterampilan)->limit(300);
+                                }
                                 $params[] = [
                                     'nilai_id' => $nilai_akhir->nilai_akhir_id,
                                     'id_evaluasi' => $matev->id_evaluasi,
                                     'anggota_rombel_id' => $nilai_akhir->anggota_rombel_id,
                                     'nilai_kognitif_angka' => $nilai_akhir->nilai,
+                                    'ket_kognitif' => $deskripsi,
                                     'a_beku' => 1,
                                     'create_date' => now(),
                                     'last_update' => now(),
